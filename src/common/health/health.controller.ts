@@ -17,6 +17,9 @@ export class HealthController {
   @Get() async health() {
     try {
       await this.prisma.$queryRaw`SELECT 1`;
+      // A reachable empty database cannot serve registration or authentication.
+      await this.prisma.user.findFirst({ select: { id: true } });
+      await this.prisma.authSession.findFirst({ select: { id: true } });
     } catch {
       throw new AppException(503, ErrorCode.DATABASE_UNAVAILABLE, 'Database is unavailable');
     }
