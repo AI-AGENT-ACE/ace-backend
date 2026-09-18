@@ -7,7 +7,7 @@
   "scripts": {
     "build": "prisma generate && nest build",
     "start": "node dist/main.js",
-    "prestart:dev": "prisma generate",
+    "prestart:dev": "prisma generate && prisma migrate deploy",
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
     "setup:dev": "node scripts/setup-dev.mjs",

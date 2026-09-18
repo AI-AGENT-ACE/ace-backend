@@ -40,7 +40,11 @@ export class ApiExceptionFilter implements ExceptionFilter {
       code = ErrorCode.VALIDATION_ERROR;
       message = 'Request body is too large';
     } else if (error instanceof Prisma.PrismaClientKnownRequestError) {
-      if (['P2002', 'P2003', 'P2034'].includes(error.code)) {
+      if (['P2021', 'P2022'].includes(error.code)) {
+        statusCode = 503;
+        code = ErrorCode.DATABASE_UNAVAILABLE;
+        message = 'Database schema is not ready';
+      } else if (['P2002', 'P2003', 'P2034'].includes(error.code)) {
         statusCode = 409;
         code = ErrorCode.CONFLICT;
         message = 'The operation conflicts with existing data';
@@ -52,7 +56,13 @@ export class ApiExceptionFilter implements ExceptionFilter {
     }
     if (statusCode >= 500) {
       // Exception text, stack, headers, URL queries and request bodies may contain secrets.
-      this.logger.error({ code, requestId: response.getHeader('X-Request-ID') });
+      this.logger.error({
+        code,
+        requestId: response.getHeader('X-Request-ID'),
+        ...(error instanceof Prisma.PrismaClientKnownRequestError
+          ? { prismaCode: error.code }
+          : {}),
+      });
     }
     response.status(statusCode).json({
       statusCode,
