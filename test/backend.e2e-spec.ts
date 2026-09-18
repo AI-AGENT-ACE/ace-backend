@@ -200,6 +200,33 @@ describe('ACE APIs with real PostgreSQL', () => {
       .send({ title: 'bad', userId: second.user.id })
       .expect(400);
   });
+  it('enforces registration password composition and accepts eight characters', async () => {
+    const email = `${randomUUID()}@example.com`;
+    for (const candidate of [
+      'Abcde1!',
+      'abcdefgh',
+      'abcdefg1',
+      '1234567!',
+      'abcdefg!',
+      'Abcdef1 ',
+      'Abcdef1한',
+      'Ab1!' + 'a'.repeat(125),
+    ]) {
+      await request(app.getHttpServer())
+        .post('/auth/register')
+        .send({ email, password: candidate })
+        .expect(400);
+    }
+    const response = await request(app.getHttpServer())
+      .post('/auth/register')
+      .send({ email, password: 'Abcdef1!' })
+      .expect(201);
+    accountIds.push((response.body as Account).user.id);
+    await request(app.getHttpServer())
+      .post('/auth/login')
+      .send({ email, password: 'Abcdef1!' })
+      .expect(200);
+  });
   it('creates, renames and pins an owned conversation', async () => {
     const response = await request(app.getHttpServer())
       .patch(`/conversations/${conversation}`)
