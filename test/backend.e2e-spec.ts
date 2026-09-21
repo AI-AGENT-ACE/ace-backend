@@ -4,6 +4,8 @@ import { Test } from '@nestjs/testing';
 import { ThrottlerGuard } from '@nestjs/throttler';
 import request from 'supertest';
 import { randomUUID } from 'node:crypto';
+import { access } from 'node:fs/promises';
+import { resolve } from 'node:path';
 import { AppModule } from '../src/app.module';
 import { AiServerClient } from '../src/agent/ports/ai-server.client';
 import { PasswordHasher } from '../src/auth/services/password-hasher.service';
@@ -473,6 +475,13 @@ describe('ACE APIs with real PostgreSQL', () => {
   it('purges expired trash in bounded batches without deleting recent trash', async () => {
     const expired = await createConversation();
     const recent = await createConversation();
+    const png = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10, 0]);
+    const uploaded = await request(app.getHttpServer())
+      .post(`/conversations/${expired}/attachments`)
+      .auth(first.accessToken, { type: 'bearer' })
+      .attach('file', png, { filename: 'cleanup.png', contentType: 'image/png' })
+      .expect(201);
+    const stored = await prisma.attachment.findUniqueOrThrow({ where: { id: uploaded.body.id } });
     await prisma.conversation.update({
       where: { id: expired },
       data: { deletedAt: new Date(Date.now() - 32 * 86400000) },
@@ -487,6 +496,10 @@ describe('ACE APIs with real PostgreSQL', () => {
     } while (batch.scanned > 0);
     expect(await prisma.conversation.findUnique({ where: { id: expired } })).toBeNull();
     expect(await prisma.message.count({ where: { conversationId: expired } })).toBe(0);
+    expect(await prisma.attachment.count({ where: { conversationId: expired } })).toBe(0);
+    await expect(
+      access(resolve(process.env.UPLOAD_DIR || './uploads', stored.storagePath)),
+    ).rejects.toBeDefined();
     expect(await prisma.conversation.findUnique({ where: { id: recent } })).not.toBeNull();
   });
   it('updates only account cloud settings and rejects local runtime fields', async () => {

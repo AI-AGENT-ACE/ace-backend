@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { ScheduleModule } from '@nestjs/schedule';
 import { AgentModule } from './agent/agent.module';
 import { AuthModule } from './auth/auth.module';
 import { validateEnvironment } from './common/config/environment';
@@ -17,6 +18,8 @@ import { UsersModule } from './users/users.module';
 import { WeatherModule } from './weather/weather.module';
 import { VoiceLogsModule } from './voice-logs/voice-logs.module';
 import { AttachmentsModule } from './attachments/attachments.module';
+import { ConfigService } from '@nestjs/config';
+import { rateLimitKey, rateLimitTracker } from './common/rate-limit/rate-limit-key';
 
 @Module({
   imports: [
@@ -34,7 +37,21 @@ import { AttachmentsModule } from './attachments/attachments.module';
     VoiceLogsModule,
     AgentModule,
     AttachmentsModule,
-    ThrottlerModule.forRoot([{ ttl: 60000, limit: 120 }]),
+    ScheduleModule.forRoot(),
+    ThrottlerModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        throttlers: [
+          {
+            name: 'default',
+            ttl: config.getOrThrow<number>('RATE_LIMIT_TTL'),
+            limit: config.getOrThrow<number>('RATE_LIMIT_MAX'),
+          },
+        ],
+        getTracker: (request) => rateLimitTracker(request),
+        generateKey: rateLimitKey,
+      }),
+    }),
   ],
   controllers: [HealthController],
   providers: [ThrottlerGuard, { provide: APP_GUARD, useExisting: ThrottlerGuard }],

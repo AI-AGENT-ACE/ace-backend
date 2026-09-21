@@ -5,15 +5,20 @@ import { cursorPage } from '../common/pagination/page.dto';
 import { ConversationsRepository } from './conversations.repository';
 import { ConversationQueryDto, UpdateConversationDto } from './dto/conversation.dto';
 import { AttachmentCleanupService } from '../attachments/attachments.service';
+import { ConfigService } from '@nestjs/config';
 
-export const TRASH_RETENTION_MS = 30 * 86400 * 1000;
+export const DEFAULT_TRASH_RETENTION_DAYS = 30;
 
 @Injectable()
 export class ConversationsService {
   constructor(
     private readonly conversations: ConversationsRepository,
     private readonly attachments: AttachmentCleanupService,
+    private readonly config: ConfigService,
   ) {}
+  private retentionMs() {
+    return this.config.get<number>('TRASH_RETENTION_DAYS', DEFAULT_TRASH_RETENTION_DAYS) * 86400000;
+  }
   create(userId: string, title?: string) {
     return this.conversations.create(userId, title);
   }
@@ -37,7 +42,7 @@ export class ConversationsService {
     return {
       ...page,
       items: page.items.map((item) => {
-        const expiresAt = new Date(item.deletedAt!.getTime() + TRASH_RETENTION_MS);
+        const expiresAt = new Date(item.deletedAt!.getTime() + this.retentionMs());
         return {
           ...item,
           expiresAt,
@@ -76,7 +81,7 @@ export class ConversationsService {
 
   async restore(userId: string, id: string) {
     const conversation = await this.ownedTrash(userId, id);
-    const cutoff = new Date(Date.now() - TRASH_RETENTION_MS);
+    const cutoff = new Date(Date.now() - this.retentionMs());
     if (conversation.deletedAt!.getTime() <= cutoff.getTime()) {
       throw new AppException(
         410,
