@@ -16,6 +16,7 @@ import { ToolsModule } from './tools/tools.module';
 import { UsersModule } from './users/users.module';
 import { WeatherModule } from './weather/weather.module';
 import { VoiceLogsModule } from './voice-logs/voice-logs.module';
+import { AttachmentsModule } from './attachments/attachments.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { VoiceLogsModule } from './voice-logs/voice-logs.module';
     LogsModule,
     VoiceLogsModule,
     AgentModule,
+    AttachmentsModule,
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 120 }]),
   ],
   controllers: [HealthController],

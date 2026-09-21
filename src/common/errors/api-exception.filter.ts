@@ -13,7 +13,16 @@ export class ApiExceptionFilter implements ExceptionFilter {
     let statusCode = 500;
     let code: string = ErrorCode.INTERNAL_SERVER_ERROR;
     let message: string | string[] = 'An unexpected error occurred';
-    if (error instanceof HttpException) {
+    if (
+      error instanceof Error &&
+      error.name === 'MulterError' &&
+      'code' in error &&
+      error.code === 'LIMIT_FILE_SIZE'
+    ) {
+      statusCode = 413;
+      code = ErrorCode.FILE_TOO_LARGE;
+      message = 'File size limit exceeded';
+    } else if (error instanceof HttpException) {
       statusCode = error.getStatus();
       const body = error.getResponse();
       const codes: Record<number, ErrorCode> = {

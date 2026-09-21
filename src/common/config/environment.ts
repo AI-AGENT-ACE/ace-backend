@@ -47,6 +47,9 @@ const schema = z
     WEATHER_API_KEY: z.string().optional(),
     EXTERNAL_API_TIMEOUT_MS: z.coerce.number().int().min(100).max(30000).default(10000),
     REQUEST_BODY_LIMIT: z.enum(['128kb', '256kb', '1mb']).default('128kb'),
+    UPLOAD_DIR: z.string().min(1).default('./uploads'),
+    MAX_UPLOAD_SIZE: z.coerce.number().int().min(1).max(26214400).default(26214400),
+    MAX_FILES_PER_MESSAGE: z.coerce.number().int().min(1).max(5).default(5),
   })
   .superRefine((env, context) => {
     if (env.JWT_ACCESS_SECRET === env.JWT_REFRESH_SECRET) {

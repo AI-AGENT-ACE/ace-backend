@@ -186,6 +186,24 @@ docs/                   설계·API·DB·오류 분석
 - 데이터는 인증된 사용자 기준으로 조회하고 커서와 도구 티켓에도 소유권을 검사합니다.
 - 로컬 PC 실행은 클라이언트 책임으로 유지하고 서버에는 최소 메타데이터만 저장합니다.
 
+## 로컬 파일 첨부
+
+인증된 사용자는 자신의 대화에 TXT, MD, CSV, JSON, PNG, JPG, WEBP, PDF, DOCX, WAV, MP3, M4A 파일을 첨부할 수 있습니다. 원본은 `UPLOAD_DIR` 아래 사용자·대화별 디렉터리에 저장하고 PostgreSQL에는 메타데이터만 저장합니다.
+
+- `POST /conversations/:conversationId/attachments`: multipart 업로드
+- `GET /attachments/:id/download`: 소유권 검사 후 스트리밍 다운로드
+- `DELETE /attachments/:id`: 파일과 메타데이터 삭제
+- 대화 영구 삭제와 30일 정리 시 관련 로컬 파일도 함께 제거
+- 확장자, MIME, 파일 signature, 종류별 크기를 모두 검사
+
+Docker 실행 시 `compose.yaml`의 `ace_uploads` named volume이 `/data/ace/uploads`에 연결되므로 컨테이너 재생성 후에도 파일이 유지됩니다. Volume 자체를 삭제하면 파일도 삭제됩니다.
+
+```powershell
+docker compose up -d --build
+docker compose down
+docker compose up -d
+```
+
 ## 검증과 DB 관리
 
 ```powershell

@@ -1,0 +1,15 @@
+services:
+  backend:
+    build: .
+    env_file: .env
+    environment:
+      HOST: 0.0.0.0
+      UPLOAD_DIR: /data/ace/uploads
+    ports:
+      - "3001:3001"
+    volumes:
+      - ace_uploads:/data/ace/uploads
+    restart: unless-stopped
+
+volumes:
+  ace_uploads:

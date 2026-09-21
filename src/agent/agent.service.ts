@@ -21,7 +21,13 @@ export class AgentService {
   async turn(userId: string, input: AgentTurnDto) {
     return this.events.track(AgentEventKind.TURN, async () => {
       await this.conversations.active(userId, input.conversationId);
-      await this.messages.append(userId, input.conversationId, MessageRole.USER, input.content);
+      await this.messages.append(
+        userId,
+        input.conversationId,
+        MessageRole.USER,
+        input.content,
+        input.attachmentIds,
+      );
       const response = await this.ai.generate(
         await this.context.build(userId, input.conversationId),
       );

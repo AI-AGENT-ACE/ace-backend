@@ -4,12 +4,16 @@ import { ErrorCode } from '../common/errors/error-code';
 import { cursorPage } from '../common/pagination/page.dto';
 import { ConversationsRepository } from './conversations.repository';
 import { ConversationQueryDto, UpdateConversationDto } from './dto/conversation.dto';
+import { AttachmentCleanupService } from '../attachments/attachments.service';
 
 export const TRASH_RETENTION_MS = 30 * 86400 * 1000;
 
 @Injectable()
 export class ConversationsService {
-  constructor(private readonly conversations: ConversationsRepository) {}
+  constructor(
+    private readonly conversations: ConversationsRepository,
+    private readonly attachments: AttachmentCleanupService,
+  ) {}
   create(userId: string, title?: string) {
     return this.conversations.create(userId, title);
   }
@@ -92,6 +96,7 @@ export class ConversationsService {
 
   async permanentDelete(userId: string, id: string) {
     await this.ownedTrash(userId, id);
+    await this.attachments.removeForConversations([id]);
     const changed = await this.conversations.permanentDelete(userId, id);
     if (!changed.count)
       throw new AppException(
