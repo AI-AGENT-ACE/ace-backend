@@ -24,6 +24,6 @@ export class MessagesController {
     @Param('id', ResourceIdPipe) id: string,
     @Body() input: CreateMessageDto,
   ) {
-    return this.messages.append(user.userId, id, input.role, input.content);
+    return this.messages.append(user.userId, id, input.role, input.content, input.attachmentIds);
   }
 }

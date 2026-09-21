@@ -239,6 +239,61 @@ describe('ACE APIs with real PostgreSQL', () => {
       userId: first.user.id,
     });
   });
+  it('uploads, links, downloads and deletes an owned binary attachment', async () => {
+    const png = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10, 0, 1, 2, 3]);
+    await request(app.getHttpServer())
+      .post(`/conversations/${conversation}/attachments`)
+      .attach('file', png, { filename: '사진 1.png', contentType: 'image/png' })
+      .expect(401);
+    const uploaded = await request(app.getHttpServer())
+      .post(`/conversations/${conversation}/attachments`)
+      .auth(first.accessToken, { type: 'bearer' })
+      .attach('file', png, { filename: '사진 1.png', contentType: 'image/png' })
+      .expect(201);
+    expect(uploaded.body).toMatchObject({
+      originalName: '사진 1.png',
+      mimeType: 'image/png',
+      size: png.length,
+    });
+    expect(uploaded.body.storagePath).toBeUndefined();
+    await request(app.getHttpServer())
+      .get(`/attachments/${uploaded.body.id}/download`)
+      .auth(second.accessToken, { type: 'bearer' })
+      .expect(404);
+    const message = await request(app.getHttpServer())
+      .post(`/conversations/${conversation}/messages`)
+      .auth(first.accessToken, { type: 'bearer' })
+      .send({ content: '이미지 첨부', attachmentIds: [uploaded.body.id] })
+      .expect(201);
+    expect(message.body.attachments).toEqual([
+      expect.objectContaining({ id: uploaded.body.id, size: png.length }),
+    ]);
+    const downloaded = await request(app.getHttpServer())
+      .get(`/attachments/${uploaded.body.id}/download`)
+      .auth(first.accessToken, { type: 'bearer' })
+      .expect('Content-Type', /image\/png/)
+      .expect(200);
+    expect(Buffer.from(downloaded.body)).toEqual(png);
+    await request(app.getHttpServer())
+      .delete(`/attachments/${uploaded.body.id}`)
+      .auth(first.accessToken, { type: 'bearer' })
+      .expect(204);
+    await request(app.getHttpServer())
+      .get(`/attachments/${uploaded.body.id}/download`)
+      .auth(first.accessToken, { type: 'bearer' })
+      .expect(404);
+  });
+  it('rejects a file whose extension and MIME do not match its signature', async () => {
+    const response = await request(app.getHttpServer())
+      .post(`/conversations/${conversation}/attachments`)
+      .auth(first.accessToken, { type: 'bearer' })
+      .attach('file', Buffer.from('not a real pdf'), {
+        filename: '가짜.pdf',
+        contentType: 'application/pdf',
+      })
+      .expect(415);
+    expect(response.body.code).toBe('INVALID_FILE_SIGNATURE');
+  });
   it('blocks every conversation operation from a different account', async () => {
     for (const method of ['get', 'patch', 'delete'] as const) {
       const client = request(app.getHttpServer());

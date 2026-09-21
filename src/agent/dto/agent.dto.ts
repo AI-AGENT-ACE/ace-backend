@@ -9,6 +9,8 @@ import {
   MaxLength,
   Min,
   MinLength,
+  IsArray,
+  ArrayMaxSize,
 } from 'class-validator';
 import { OptionalField } from '../../common/validation/optional-field.decorator';
 import { ToolExecutionStatus } from '../../generated/prisma/client';
@@ -19,9 +21,14 @@ export class AgentTurnDto {
   @Matches(/^[a-z0-9]{20,40}$/)
   conversationId!: string;
   @IsString()
-  @MinLength(1)
   @MaxLength(20000)
   content!: string;
+  @OptionalField()
+  @IsArray()
+  @ArrayMaxSize(5)
+  @IsString({ each: true })
+  @Matches(/^[a-z0-9]{20,40}$/, { each: true })
+  attachmentIds: string[] = [];
 }
 
 export class ToolTicketDto {

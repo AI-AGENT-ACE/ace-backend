@@ -7,6 +7,7 @@ coverage/
 .local/
 src/generated/
 artifacts/
+uploads/
 *.log
 *.tsbuildinfo
 *.pem

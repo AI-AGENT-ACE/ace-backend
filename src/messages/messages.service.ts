@@ -21,18 +21,45 @@ export class MessagesService {
         'Cursor does not belong to this conversation',
       );
     }
-    return cursorPage(
+    const page = cursorPage(
       await this.messages.list(userId, conversationId, query.limit, query.cursor),
       query.limit,
     );
+    return { ...page, items: page.items.map(normalizeMessage) };
   }
-  append(userId: string, conversationId: string, role: MessageRole, content: string) {
-    if (content.length < 1 || content.length > 20000)
+  async append(
+    userId: string,
+    conversationId: string,
+    role: MessageRole,
+    content: string,
+    attachmentIds: string[] = [],
+  ) {
+    if (
+      (!content.trim() && !attachmentIds.length) ||
+      content.length > 20000 ||
+      attachmentIds.length > 5
+    )
       throw new AppException(
         400,
         ErrorCode.VALIDATION_ERROR,
         'Message content must be 1..20000 characters',
       );
-    return this.messages.append(userId, conversationId, role, content);
+    return normalizeMessage(
+      await this.messages.append(userId, conversationId, role, content, attachmentIds),
+    );
   }
+}
+
+function normalizeMessage<T extends { attachments?: { size: bigint }[] }>(message: T) {
+  return {
+    ...message,
+    ...(message.attachments
+      ? {
+          attachments: message.attachments.map((attachment) => ({
+            ...attachment,
+            size: Number(attachment.size),
+          })),
+        }
+      : {}),
+  };
 }
