@@ -18,6 +18,7 @@ import { AuthenticatedUser } from '../auth/types/authenticated-user';
 import { ResourceIdPipe } from '../common/validation/resource-id.pipe';
 import { AttachmentsService } from './attachments.service';
 import { UploadFile } from './file-policy';
+import { Throttle } from '@nestjs/throttler';
 
 @ApiTags('Attachments')
 @ApiBearerAuth()
@@ -25,6 +26,7 @@ import { UploadFile } from './file-policy';
 export class AttachmentsController {
   constructor(private readonly attachments: AttachmentsService) {}
   @Post('conversations/:conversationId/attachments')
+  @Throttle({ default: { limit: 20, ttl: 60000 } })
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 26214400, files: 1 } }))
   upload(

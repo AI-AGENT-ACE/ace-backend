@@ -5,6 +5,7 @@ import { AuthenticatedUser } from '../auth/types/authenticated-user';
 import { AgentService } from './agent.service';
 import { AgentCloudToolDto, AgentTurnDto, LocalToolResultDto } from './dto/agent.dto';
 import { AgentToolResultsService } from './services/agent-tool-results.service';
+import { Throttle } from '@nestjs/throttler';
 
 @ApiTags('Agent')
 @ApiBearerAuth()
@@ -14,7 +15,9 @@ export class AgentController {
     private readonly agent: AgentService,
     private readonly results: AgentToolResultsService,
   ) {}
-  @Post('turns') turn(@CurrentUser() user: AuthenticatedUser, @Body() input: AgentTurnDto) {
+  @Post('turns')
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
+  turn(@CurrentUser() user: AuthenticatedUser, @Body() input: AgentTurnDto) {
     return this.agent.turn(user.userId, input);
   }
   @Post('tool-results') local(

@@ -235,8 +235,10 @@ npm run trash:purge
 인증·대화·메시지·휴지통·설정·도구 티켓·로그 API와 React/Tauri 연결은 구현했습니다.
 
 - 실제 AI·OpenWeather 설정과 운영 연결 검증이 필요합니다. AI 계약이 다르면 `HttpAiServerClient`에서 변환합니다.
-- 휴지통 만료 정리는 CLI를 외부 Cron에 연결하거나 보존 서비스에 Scheduler를 연결해야 합니다.
-- 요청 빈도 제한은 단일 프로세스 메모리 기반입니다. 다중 인스턴스 배포 시 공유 정책·Proxy 구성이 필요합니다.
+- 휴지통은 기본적으로 매일 `Asia/Seoul` 새벽 3시에 250개 단위로 자동 정리합니다. `TRASH_CLEANUP_*` 환경변수로 주기·시간대·배치·활성 상태를 변경할 수 있고 기존 `trash:purge` CLI도 유지합니다.
+- Scheduler는 같은 인스턴스의 중복 실행을 건너뜁니다. 서버가 여러 대가 되면 `TrashCleanupScheduler` 실행부에 분산 Lock을 연결하거나 Scheduler 전용 Worker를 한 대만 운영해야 합니다.
+- 요청 빈도 제한은 `RATE_LIMIT_TTL`과 `RATE_LIMIT_MAX`를 사용하는 단일 프로세스 메모리 기반입니다. IP·인증 사용자·endpoint 범주별 키를 사용하며 다중 인스턴스 배포 시 `ratelimit:` namespace의 Redis Store로 교체해야 합니다.
+- Reverse Proxy를 직접 신뢰하지 않습니다. Nginx 등 신뢰 가능한 Proxy hop 수를 확인한 뒤에만 `TRUST_PROXY_HOPS`를 설정해야 합니다.
 - STT·TTS·Wake Word 감지는 이 백엔드에 구현하지 않았습니다.
 - 도구 티켓은 호출 상관관계와 인자를 검증하며 로컬 실행 완료를 서버가 증명하는 수단은 아닙니다.
 - 배포 자동화와 운영 모니터링은 별도 작업입니다.

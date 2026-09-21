@@ -8,12 +8,15 @@ async function purge() {
   try {
     const retention = app.get(TrashRetentionService);
     let deleted = 0;
+    let failed = 0;
     let batch;
     do {
       batch = await retention.purgeExpired();
       deleted += batch.deleted;
-    } while (batch.scanned > 0);
-    console.log(`Expired conversations permanently deleted: ${deleted}`);
+      failed += batch.failed;
+    } while (batch.scanned > 0 && batch.failed === 0);
+    console.log(`Expired conversations permanently deleted: ${deleted}; failed: ${failed}`);
+    if (failed > 0) process.exitCode = 1;
   } finally {
     await app.close();
   }

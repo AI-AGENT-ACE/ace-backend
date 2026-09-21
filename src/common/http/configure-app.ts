@@ -9,6 +9,8 @@ import { ApiExceptionFilter } from '../errors/api-exception.filter';
 export function configureApp(app: INestApplication) {
   const config = app.get(ConfigService);
   const limit = config.getOrThrow<string>('REQUEST_BODY_LIMIT');
+  const trustProxyHops = config.getOrThrow<number>('TRUST_PROXY_HOPS');
+  if (trustProxyHops > 0) app.getHttpAdapter().getInstance().set('trust proxy', trustProxyHops);
   app.use((request: Request, response: Response, next: NextFunction) => {
     const supplied = request.header('X-Request-ID');
     response.setHeader(

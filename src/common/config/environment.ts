@@ -1,4 +1,22 @@
 import { z } from 'zod';
+import { CronTime } from 'cron';
+
+const validCron = (value: string) => {
+  try {
+    new CronTime(value);
+    return true;
+  } catch {
+    return false;
+  }
+};
+const validTimeZone = (value: string) => {
+  try {
+    new Intl.DateTimeFormat('en', { timeZone: value });
+    return true;
+  } catch {
+    return false;
+  }
+};
 
 function seconds(value: string): number {
   const match = /^(\d+)(s|m|h|d)?$/.exec(value);
@@ -50,6 +68,17 @@ const schema = z
     UPLOAD_DIR: z.string().min(1).default('./uploads'),
     MAX_UPLOAD_SIZE: z.coerce.number().int().min(1).max(26214400).default(26214400),
     MAX_FILES_PER_MESSAGE: z.coerce.number().int().min(1).max(5).default(5),
+    TRASH_RETENTION_DAYS: z.coerce.number().int().min(1).max(3650).default(30),
+    TRASH_CLEANUP_CRON: z.string().min(5).max(100).default('0 3 * * *').refine(validCron),
+    TRASH_CLEANUP_TIME_ZONE: z.string().min(1).max(100).default('Asia/Seoul').refine(validTimeZone),
+    TRASH_CLEANUP_BATCH_SIZE: z.coerce.number().int().min(100).max(500).default(250),
+    TRASH_CLEANUP_ENABLED: z
+      .enum(['true', 'false'])
+      .default('true')
+      .transform((v) => v === 'true'),
+    RATE_LIMIT_TTL: z.coerce.number().int().min(1000).max(3600000).default(60000),
+    RATE_LIMIT_MAX: z.coerce.number().int().min(1).max(10000).default(120),
+    TRUST_PROXY_HOPS: z.coerce.number().int().min(0).max(5).default(0),
   })
   .superRefine((env, context) => {
     if (env.JWT_ACCESS_SECRET === env.JWT_REFRESH_SECRET) {
