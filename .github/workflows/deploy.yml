@@ -1,0 +1,83 @@
+name: Backend Image and Deployment
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: ace-backend-production
+  cancel-in-progress: false
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  image:
+    runs-on: ubuntu-latest
+    outputs:
+      image: ${{ steps.image.outputs.image }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: image
+        shell: bash
+        run: |
+          echo "image=${REGISTRY}/${IMAGE_NAME,,}:${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+          echo "latest=${REGISTRY}/${IMAGE_NAME,,}:latest" >> "$GITHUB_OUTPUT"
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ steps.image.outputs.image }}
+            ${{ steps.image.outputs.latest }}
+          labels: |
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    needs: image
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      AWS_HOST: ${{ secrets.AWS_HOST }}
+      AWS_USER: ${{ secrets.AWS_USER }}
+      AWS_SSH_KEY: ${{ secrets.AWS_SSH_KEY }}
+      AWS_KNOWN_HOSTS: ${{ secrets.AWS_KNOWN_HOSTS }}
+      DEPLOY_PATH: ${{ vars.DEPLOY_PATH }}
+      BACKEND_IMAGE: ${{ needs.image.outputs.image }}
+    steps:
+      - name: Validate deployment configuration
+        shell: bash
+        run: |
+          test -n "$AWS_HOST"
+          test -n "$AWS_USER"
+          test -n "$AWS_SSH_KEY"
+          test -n "$AWS_KNOWN_HOSTS"
+          test -n "$DEPLOY_PATH"
+      - name: Configure SSH
+        shell: bash
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$AWS_SSH_KEY" > ~/.ssh/ace_deploy
+          chmod 600 ~/.ssh/ace_deploy
+          printf '%s\n' "$AWS_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+      - name: Deploy only backend service
+        shell: bash
+        run: |
+          printf -v remote_command 'set -eu; cd %q; export BACKEND_IMAGE=%q; docker compose -f compose.production.yaml pull backend; docker compose -f compose.production.yaml run --rm backend-migrate; docker compose -f compose.production.yaml up -d --no-deps backend; attempt=1; while [ "$attempt" -le 20 ]; do if docker compose -f compose.production.yaml exec -T backend node -e "fetch('\''http://127.0.0.1:3001/health/ready'\'').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"; then exit 0; fi; attempt=$((attempt + 1)); sleep 3; done; docker compose -f compose.production.yaml logs --tail=100 backend; exit 1' "$DEPLOY_PATH" "$BACKEND_IMAGE"
+          ssh -i ~/.ssh/ace_deploy "$AWS_USER@$AWS_HOST" "$remote_command"

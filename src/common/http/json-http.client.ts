@@ -5,11 +5,11 @@ import { ConfigService } from '@nestjs/config';
 export class JsonHttpClient {
   constructor(private readonly config: ConfigService) {}
 
-  async request(url: string, init: RequestInit = {}): Promise<unknown> {
+  async request(url: string, init: RequestInit = {}, timeoutMs?: number): Promise<unknown> {
     const abort = new AbortController();
     const timeout = setTimeout(
       () => abort.abort(),
-      this.config.getOrThrow<number>('EXTERNAL_API_TIMEOUT_MS'),
+      timeoutMs ?? this.config.getOrThrow<number>('EXTERNAL_API_TIMEOUT_MS'),
     );
     try {
       const response = await fetch(url, { ...init, signal: abort.signal, redirect: 'error' });

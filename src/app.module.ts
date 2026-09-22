@@ -20,11 +20,13 @@ import { VoiceLogsModule } from './voice-logs/voice-logs.module';
 import { AttachmentsModule } from './attachments/attachments.module';
 import { ConfigService } from '@nestjs/config';
 import { rateLimitKey, rateLimitTracker } from './common/rate-limit/rate-limit-key';
+import { HttpModule } from './common/http/http.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true, validate: validateEnvironment }),
     PrismaModule,
+    HttpModule,
     AuthModule,
     UsersModule,
     ConversationsModule,
