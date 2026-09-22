@@ -73,6 +73,7 @@ export class ApiExceptionFilter implements ExceptionFilter {
           : {}),
       });
     }
+    response.locals.errorCode = code;
     response.status(statusCode).json({
       statusCode,
       code,
