@@ -580,6 +580,35 @@ describe('ACE APIs with real PostgreSQL', () => {
       })
       .expect(201);
   });
+  it('blocks a denied cloud tool even when the request is confirmed', async () => {
+    const preference = await request(app.getHttpServer())
+      .put('/settings/permissions/weather.current')
+      .auth(first.accessToken, { type: 'bearer' })
+      .send({ policy: 'DENY' })
+      .expect(200);
+    expect(preference.body).toMatchObject({
+      policy: 'DENY',
+      denied: true,
+      requiresConfirmation: false,
+    });
+
+    const response = await request(app.getHttpServer())
+      .post('/tools/execute')
+      .auth(first.accessToken, { type: 'bearer' })
+      .send({
+        toolName: 'weather.current',
+        arguments: { latitude: 37, longitude: 127 },
+        confirmed: true,
+      })
+      .expect(403);
+    expect(response.body.code).toBe('TOOL_PERMISSION_DENIED');
+    expect(weather.current).not.toHaveBeenCalled();
+    await request(app.getHttpServer())
+      .put('/settings/permissions/weather.current')
+      .auth(first.accessToken, { type: 'bearer' })
+      .send({ policy: 'ALWAYS_ALLOW' })
+      .expect(200);
+  });
   it('returns signed local handoffs without storing the tool arguments', async () => {
     const { id, call } = await toolTurn(ToolName.APP_OPEN, { appName: 'SensitiveApp' });
     expect(call.executionLocation).toBe('LOCAL');

@@ -31,6 +31,14 @@ describe('PermissionsService', () => {
       requiresConfirmation: true,
     });
   });
+  it('marks a denied tool as blocked without requesting confirmation', async () => {
+    repo.permission.mockResolvedValue({ policy: PermissionPolicy.DENY });
+    expect(await service.effective('user-a', ToolName.FILE_OPEN)).toMatchObject({
+      policy: PermissionPolicy.DENY,
+      denied: true,
+      requiresConfirmation: false,
+    });
+  });
   it('rejects unknown tool names without modifying preferences', async () => {
     await expect(
       service.set('user-a', 'unknown.tool', PermissionPolicy.ALWAYS_ALLOW),

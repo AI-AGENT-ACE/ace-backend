@@ -21,10 +21,12 @@ export class PermissionsService {
     const definition = this.tools.get(toolName);
     const preference = await this.settings.permission(userId, toolName);
     const policy = preference?.policy ?? definition.defaultPolicy;
+    const denied = policy === PermissionPolicy.DENY;
     return {
       policy,
+      denied,
       requiresConfirmation:
-        definition.systemConfirmation || policy !== PermissionPolicy.ALWAYS_ALLOW,
+        !denied && (definition.systemConfirmation || policy === PermissionPolicy.ASK),
       systemConfirmation: definition.systemConfirmation,
     };
   }

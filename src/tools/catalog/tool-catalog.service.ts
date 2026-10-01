@@ -40,7 +40,7 @@ const definitions: ToolDefinition[] = [
     description: 'Request the desktop to close an application',
     executionLocation: ToolExecutionLocation.LOCAL,
     systemConfirmation: true,
-    defaultPolicy: PermissionPolicy.ALWAYS_ASK,
+    defaultPolicy: PermissionPolicy.ASK,
     argumentsSchema: z.object({ appName }).strict(),
   },
   {
@@ -64,7 +64,7 @@ const definitions: ToolDefinition[] = [
     description: 'Request the desktop to delete a file',
     executionLocation: ToolExecutionLocation.LOCAL,
     systemConfirmation: true,
-    defaultPolicy: PermissionPolicy.ALWAYS_ASK,
+    defaultPolicy: PermissionPolicy.ASK,
     argumentsSchema: z.object({ path }).strict(),
   },
 ];

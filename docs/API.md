@@ -93,7 +93,7 @@ PUT /settings/permissions/file.delete
 {"policy":"ALWAYS_ALLOW"}
 ```
 
-Policy: `ALWAYS_ALLOW`, `ASK`, `ALWAYS_ASK`. 변경 응답에 `requiresConfirmation`, `systemConfirmation`을 포함합니다. 사용자 선호가 ALWAYS_ALLOW여도 파괴적 Tool의 System Confirmation은 true입니다.
+Policy: `DENY`, `ASK`, `ALWAYS_ALLOW`. 변경 응답에 `denied`, `requiresConfirmation`, `systemConfirmation`을 포함합니다. `DENY`는 실행을 차단하고, 사용자 선호가 `ALWAYS_ALLOW`여도 파괴적 Tool의 System Confirmation은 true입니다.
 
 ## Tool 목록과 Cloud 실행
 
