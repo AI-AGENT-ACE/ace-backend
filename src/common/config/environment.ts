@@ -44,6 +44,10 @@ const schema = z
     JWT_REFRESH_SECRET: secret,
     JWT_ACCESS_EXPIRES_IN: duration('15m', 3600),
     JWT_REFRESH_EXPIRES_IN: duration('30d', 90 * 86400),
+    AUTH_CAPTURE_MODE: z
+      .enum(['true', 'false'])
+      .default('false')
+      .transform((v) => v === 'true'),
     CORS_ORIGINS: z
       .string()
       .default(
@@ -119,5 +123,15 @@ export function validateEnvironment(input: Record<string, unknown>) {
     const names = [...new Set(result.error.issues.map((issue) => issue.path.join('.')))];
     throw new Error(`Invalid environment configuration: ${names.join(', ')}`);
   }
-  return result.data;
+  if (result.data.AUTH_CAPTURE_MODE && result.data.NODE_ENV !== 'development') {
+    throw new Error('Invalid environment configuration: AUTH_CAPTURE_MODE');
+  }
+  return {
+    ...result.data,
+    // Short-lived access tokens make the real 401/refresh flow observable in development.
+    // The refresh-token lifetime is deliberately left unchanged.
+    JWT_ACCESS_EXPIRES_IN: result.data.AUTH_CAPTURE_MODE
+      ? 15
+      : result.data.JWT_ACCESS_EXPIRES_IN,
+  };
 }
