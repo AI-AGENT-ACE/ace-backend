@@ -46,6 +46,15 @@ export class ToolsService {
     }
     const policy = await this.permissions.effective(userId, definition.name);
     const started = performance.now();
+    if (policy.denied) {
+      await this.logs.record({
+        userId,
+        toolName: definition.name,
+        status: ToolExecutionStatus.DENIED,
+        errorCode: ToolLogErrorCode.LOCAL_PERMISSION_DENIED,
+      });
+      throw new AppException(403, ErrorCode.TOOL_PERMISSION_DENIED, 'Tool permission is denied');
+    }
     if (policy.requiresConfirmation && input.confirmed !== true) {
       await this.logs.record({
         userId,

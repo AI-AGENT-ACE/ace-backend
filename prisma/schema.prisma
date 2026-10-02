@@ -16,9 +16,9 @@ enum MessageRole {
 }
 
 enum PermissionPolicy {
-  ALWAYS_ALLOW
+  DENY
   ASK
-  ALWAYS_ASK
+  ALWAYS_ALLOW
 }
 
 enum ToolExecutionStatus {

@@ -43,6 +43,9 @@ export class AgentToolResultsService {
       );
     }
     const policy = await this.permissions.effective(userId, claims.toolName);
+    if (policy.denied && input.status !== ToolExecutionStatus.DENIED) {
+      throw new AppException(403, ErrorCode.TOOL_PERMISSION_DENIED, 'Tool permission is denied');
+    }
     if (
       input.status !== ToolExecutionStatus.DENIED &&
       policy.requiresConfirmation &&

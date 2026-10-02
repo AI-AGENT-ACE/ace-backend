@@ -32,6 +32,10 @@ export class AgentContextService {
       responseLanguage: settings.responseLanguage,
       tools: this.catalog
         .list()
+        .filter(
+          ({ name, defaultPolicy }) =>
+            (policies.get(name) ?? defaultPolicy) !== PermissionPolicy.DENY,
+        )
         .map(
           ({
             name,
