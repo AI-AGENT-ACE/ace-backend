@@ -130,8 +130,6 @@ export function validateEnvironment(input: Record<string, unknown>) {
     ...result.data,
     // Short-lived access tokens make the real 401/refresh flow observable in development.
     // The refresh-token lifetime is deliberately left unchanged.
-    JWT_ACCESS_EXPIRES_IN: result.data.AUTH_CAPTURE_MODE
-      ? 15
-      : result.data.JWT_ACCESS_EXPIRES_IN,
+    JWT_ACCESS_EXPIRES_IN: result.data.AUTH_CAPTURE_MODE ? 15 : result.data.JWT_ACCESS_EXPIRES_IN,
   };
 }
