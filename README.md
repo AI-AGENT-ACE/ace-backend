@@ -210,6 +210,7 @@ docker compose up -d
 npm run build
 npm run lint
 npm run format:check
+npm run db:generate
 npm test
 npm run test:e2e
 npm run db:migrate:status
@@ -217,7 +218,7 @@ npm run db:migrate:status
 
 E2E는 `TEST_DATABASE_URL`의 `_test` DB에 마이그레이션을 적용하고 테스트가 만든 계정만 정리합니다. PostgreSQL·Prisma·인증·Controller·Service는 실제 구현을 사용하고 외부 AI·Weather만 테스트 어댑터로 대체합니다.
 
-최근 검증: 빌드·ESLint, 단위 테스트 **38개**, API E2E **30개** 통과.
+2026.10.02 기능 통합 작업트리에서 빌드·ESLint·format 및 전체 단위 테스트 **57개 / 17 suites**가 통과했습니다. 별도 권한 브랜치의 실제 PostgreSQL API E2E는 **33개** 통과이며 같은 실행 결과가 아닙니다. API E2E는 전용 테스트 DB에서만 실행합니다.
 
 ```powershell
 # 개발 Schema 수정 후 검토용 SQL 생성
@@ -268,3 +269,7 @@ GitHub Secret, AWS 서버 준비, rollback과 로그 확인 절차는 [운영 �
 ## 라이선스
 
 현재 저장소에는 별도 라이선스가 선언되어 있지 않습니다. 프로젝트 소유자가 방향을 결정하기 전에는 LICENSE를 임의 생성하지 않습니다.
+
+## 임시 음성 명령
+
+인증된 `POST /voice/commands`가 WAV를 검증해 외부 AI `/v1/voice/commands`로 multipart 전달합니다. 일반 첨부와 별도 임시 저장소를 사용하고 성공·실패 모두 처리 후 삭제합니다. 실제 STT 응답에는 구성된 외부 AI 서버가 필요합니다. [임시 음성 수명주기](docs/VOICE_TEMP_AUDIO.md)를 참고합니다.
