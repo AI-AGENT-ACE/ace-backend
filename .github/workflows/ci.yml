@@ -11,6 +11,9 @@ permissions:
 jobs:
   verify:
     runs-on: ubuntu-latest
+    env:
+      # Generation/build only; CI unit tests never connect to this placeholder.
+      DATABASE_URL: postgresql://unused:unused@127.0.0.1:1/ace_test?schema=public
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -20,6 +23,7 @@ jobs:
       - run: npm ci
       - run: npm run format:check
       - run: npm run lint
+      - run: npm run db:generate
       - run: npm test
       - run: npm run build
       - name: Verify production image
