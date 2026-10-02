@@ -22,13 +22,11 @@ describe('VoiceCommandsService', () => {
       remove: jest.fn().mockResolvedValue(undefined),
     };
     const ai = {
-      process: jest
-        .fn()
-        .mockResolvedValue({
-          requestId: 'voice_1234567890abcdef',
-          type: 'message',
-          transcript: '안녕',
-        }),
+      process: jest.fn().mockResolvedValue({
+        requestId: 'voice_1234567890abcdef',
+        type: 'message',
+        transcript: '안녕',
+      }),
     };
     const service = new VoiceCommandsService(config as never, temp as never, ai as never);
     await expect(
