@@ -8,16 +8,17 @@ services:
       NODE_ENV: production
       HOST: 0.0.0.0
       UPLOAD_DIR: /data/ace/uploads
+      VOICE_TEMP_DIR: /tmp/ace/voice
     ports:
-      - "127.0.0.1:${BACKEND_PORT:-3001}:3001"
+      - '127.0.0.1:${BACKEND_PORT:-3001}:3001'
     volumes:
       - ace_uploads:/data/ace/uploads
     healthcheck:
       test:
         [
-          "CMD",
-          "node",
-          "-e",
+          'CMD',
+          'node',
+          '-e',
           "fetch('http://127.0.0.1:3001/health/ready').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))",
         ]
       interval: 30s
@@ -32,14 +33,14 @@ services:
     env_file: .env
     environment:
       NODE_ENV: production
-    command: ["npx", "prisma", "migrate", "deploy"]
-    restart: "no"
+    command: ['npx', 'prisma', 'migrate', 'deploy']
+    restart: 'no'
 
   ai:
     image: ${AI_IMAGE:-ghcr.io/ai-agent-ace/ace-ai:latest}
     profiles: [ai]
     ports:
-      - "127.0.0.1:${AI_PORT:-8000}:8000"
+      - '127.0.0.1:${AI_PORT:-8000}:8000'
     restart: unless-stopped
 
   postgres:
@@ -51,7 +52,7 @@ services:
     volumes:
       - ace_postgres:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      test: ['CMD-SHELL', 'pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB']
       interval: 10s
       timeout: 5s
       retries: 10
@@ -60,11 +61,11 @@ services:
   redis:
     image: redis:7-alpine
     profiles: [redis]
-    command: ["redis-server", "--appendonly", "yes"]
+    command: ['redis-server', '--appendonly', 'yes']
     volumes:
       - ace_redis:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ['CMD', 'redis-cli', 'ping']
       interval: 10s
       timeout: 3s
       retries: 10

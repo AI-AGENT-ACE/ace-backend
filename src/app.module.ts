@@ -21,6 +21,7 @@ import { AttachmentsModule } from './attachments/attachments.module';
 import { ConfigService } from '@nestjs/config';
 import { rateLimitKey, rateLimitTracker } from './common/rate-limit/rate-limit-key';
 import { HttpModule } from './common/http/http.module';
+import { VoiceCommandsModule } from './voice-commands/voice-commands.module';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { HttpModule } from './common/http/http.module';
     ToolsModule,
     LogsModule,
     VoiceLogsModule,
+    VoiceCommandsModule,
     AgentModule,
     AttachmentsModule,
     ScheduleModule.forRoot(),
