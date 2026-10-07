@@ -9,6 +9,8 @@
   "scripts": {
     "build": "prisma generate && nest build",
     "start": "node dist/main.js",
+    "start:prod": "node dist/main.js",
+    "start:render": "prisma migrate deploy && npm run start:prod",
     "prestart:dev": "prisma generate && prisma migrate deploy",
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",

@@ -1,6 +1,7 @@
 import { Controller, Get } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ApiTags } from '@nestjs/swagger';
+import { SkipThrottle } from '@nestjs/throttler';
 import { Public } from '../../auth/decorators/public.decorator';
 import { PrismaService } from '../prisma/prisma.service';
 import { AppException } from '../errors/app.exception';
@@ -16,8 +17,10 @@ export class HealthController {
     private readonly config: ConfigService,
     private readonly http: JsonHttpClient,
   ) {}
-  @Get('live') live() {
-    return { status: 'ok', service: 'ace-backend', uptime: Math.floor(process.uptime()) };
+  @SkipThrottle()
+  @Get('live')
+  live() {
+    return { status: 'ok' };
   }
 
   @Get(['', 'ready']) async health() {

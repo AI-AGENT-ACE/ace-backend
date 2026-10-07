@@ -48,7 +48,12 @@ describe('HealthController readiness', () => {
   });
 
   it('keeps liveness independent from external dependencies', () => {
-    const { controller } = create();
-    expect(controller.live()).toMatchObject({ status: 'ok', service: 'ace-backend' });
+    const { controller, prisma, http, config } = create();
+    expect(controller.live()).toEqual({ status: 'ok' });
+    expect(prisma.$queryRaw).not.toHaveBeenCalled();
+    expect(prisma.user.findFirst).not.toHaveBeenCalled();
+    expect(prisma.authSession.findFirst).not.toHaveBeenCalled();
+    expect(http.request).not.toHaveBeenCalled();
+    expect(config.get).not.toHaveBeenCalled();
   });
 });

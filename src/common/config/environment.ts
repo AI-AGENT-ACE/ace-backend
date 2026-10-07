@@ -120,7 +120,11 @@ const schema = z
   });
 
 export function validateEnvironment(input: Record<string, unknown>) {
-  const result = schema.safeParse(input);
+  const result = schema.safeParse({
+    ...input,
+    // Keep local binding unchanged; production platforms expose the assigned PORT.
+    HOST: input.HOST ?? (input.NODE_ENV === 'production' ? '0.0.0.0' : '127.0.0.1'),
+  });
   if (!result.success) {
     const names = [...new Set(result.error.issues.map((issue) => issue.path.join('.')))];
     throw new Error(`Invalid environment configuration: ${names.join(', ')}`);
