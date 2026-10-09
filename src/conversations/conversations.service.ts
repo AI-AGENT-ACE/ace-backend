@@ -22,6 +22,11 @@ export class ConversationsService {
   create(userId: string, title?: string) {
     return this.conversations.create(userId, title);
   }
+  async applyAiTitle(userId: string, id: string, title?: string) {
+    const normalized = title?.replace(/\s+/gu, ' ').trim();
+    if (normalized && Array.from(normalized).length <= 200)
+      await this.conversations.applyAiTitle(userId, id, normalized);
+  }
 
   async active(userId: string, id: string) {
     const conversation = await this.conversations.findActive(userId, id);

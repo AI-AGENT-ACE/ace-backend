@@ -17,11 +17,16 @@ import { ToolExecutionStatus } from '../../generated/prisma/client';
 import { ToolLogErrorCode } from '../../logs/tool-log.types';
 
 export class AgentTurnDto {
+  @OptionalField()
+  @IsString()
+  @Matches(/^[a-z0-9]{20,40}$/)
+  messageId?: string;
   @IsString()
   @Matches(/^[a-z0-9]{20,40}$/)
   conversationId!: string;
   @IsString()
-  @MaxLength(20000)
+  @MinLength(1)
+  @MaxLength(10000)
   content!: string;
   @OptionalField()
   @IsArray()

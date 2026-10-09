@@ -5,24 +5,17 @@ import { AppException } from '../common/errors/app.exception';
 import { ErrorCode } from '../common/errors/error-code';
 import { JsonHttpClient } from '../common/http/json-http.client';
 import { z } from 'zod';
+import { modalEnvelope, unsupportedSequence } from '../agent/adapters/modal-response';
+import { AiConversationsService } from '../agent/adapters/ai-conversations.service';
 
-const voiceResult = z
-  .object({
-    requestId: z.string().min(1).max(128),
-    transcript: z.string().max(20000).optional(),
-    content: z.string().max(20000).optional(),
-    type: z.enum(['message', 'tool_call']),
-    tool: z.string().min(1).max(100).optional(),
-    arguments: z.record(z.string(), z.unknown()).optional(),
-  })
-  .strict()
-  .refine((value) => value.type !== 'tool_call' || Boolean(value.tool && value.arguments));
+const voiceResult = modalEnvelope.extend({ transcript: z.string().max(20000) });
 
 @Injectable()
 export class VoiceAiClient {
   constructor(
     private readonly config: ConfigService,
     private readonly http: JsonHttpClient,
+    private readonly conversations: AiConversationsService,
   ) {}
   async process(path: string, recordingId: string, userId: string, conversationId?: string) {
     const base = this.config.get<string>('AI_SERVER_URL');
@@ -39,26 +32,40 @@ export class VoiceAiClient {
       new Blob([new Uint8Array(bytes)], { type: 'audio/wav' }),
       `${recordingId}.wav`,
     );
-    form.append('recordingId', recordingId);
-    form.append('userId', userId);
-    if (conversationId) form.append('conversationId', conversationId);
     const headers: Record<string, string> = {};
     const key = this.config.get<string>('AI_SERVER_API_KEY');
     if (key) headers.Authorization = `Bearer ${key}`;
     try {
+      const remoteId = conversationId
+        ? await this.conversations.resolve(
+            userId,
+            conversationId,
+            base.replace(/\/$/, ''),
+            headers,
+            this.config.getOrThrow<number>('VOICE_PROCESSING_TIMEOUT_MS'),
+          )
+        : undefined;
+      if (remoteId) form.append('conversationId', remoteId);
       const response = await this.http.request(
-        new URL('v1/voice/commands', `${base.replace(/\/$/, '')}/`).toString(),
+        new URL('agent/voice', `${base.replace(/\/$/, '')}/`).toString(),
         { method: 'POST', headers, body: form },
         this.config.getOrThrow<number>('VOICE_PROCESSING_TIMEOUT_MS'),
       );
       const parsed = voiceResult.safeParse(response);
-      if (!parsed.success || parsed.data.requestId !== recordingId)
+      if (!parsed.success || (remoteId && parsed.data.conversationId !== remoteId))
         throw new AppException(
           502,
           ErrorCode.VOICE_PROCESSING_FAILED,
           'AI voice response is invalid',
         );
-      return parsed.data;
+      const result = parsed.data.response;
+      return {
+        requestId: recordingId,
+        transcript: parsed.data.transcript,
+        ...(result.type === 'tool_sequence'
+          ? { type: 'message' as const, content: unsupportedSequence }
+          : result),
+      };
     } catch {
       throw new AppException(502, ErrorCode.VOICE_PROCESSING_FAILED, 'AI voice processing failed');
     }

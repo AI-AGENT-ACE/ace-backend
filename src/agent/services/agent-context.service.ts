@@ -28,6 +28,8 @@ export class AgentContextService {
       preferences.map((preference) => [preference.toolName, preference.policy]),
     );
     return {
+      userId,
+      conversationId,
       messages: history.items.reverse().map(({ role, content }) => ({ role, content })),
       responseLanguage: settings.responseLanguage,
       tools: this.catalog

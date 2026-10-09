@@ -62,6 +62,7 @@ const schema = z
       .transform((v) => v === 'true'),
     AI_SERVER_URL: optionalUrl,
     AI_SERVER_API_KEY: z.string().optional(),
+    AI_REQUEST_TIMEOUT_MS: z.coerce.number().int().min(1000).max(300000).default(120000),
     WEATHER_API_KEY: z.string().optional(),
     EXTERNAL_API_TIMEOUT_MS: z.coerce.number().int().min(100).max(30000).default(10000),
     REQUEST_BODY_LIMIT: z.enum(['128kb', '256kb', '1mb']).default('128kb'),
