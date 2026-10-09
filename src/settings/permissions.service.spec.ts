@@ -8,6 +8,19 @@ describe('PermissionsService', () => {
   const repo = { permission: jest.fn(), setPermission: jest.fn(), permissions: jest.fn() };
   const service = new PermissionsService(repo as unknown as SettingsRepository, new ToolCatalog());
   beforeEach(() => jest.clearAllMocks());
+  it('allows basic open operations by default but retains explicit account preferences', async () => {
+    repo.permission.mockResolvedValue(null);
+    for (const tool of [ToolName.APP_OPEN, ToolName.FILE_OPEN])
+      expect(await service.effective('user-a', tool)).toMatchObject({
+        policy: 'ALWAYS_ALLOW',
+        requiresConfirmation: false,
+      });
+    repo.permission.mockResolvedValue({ policy: PermissionPolicy.ASK });
+    expect(await service.effective('user-a', ToolName.APP_OPEN)).toMatchObject({
+      requiresConfirmation: true,
+    });
+    expect(new ToolCatalog().list().some((tool) => tool.name === 'weather.current')).toBe(false);
+  });
   it('persists an account-scoped permission preference', async () => {
     repo.setPermission.mockResolvedValue({
       userId: 'user-a',

@@ -18,21 +18,11 @@ const path = z.string().min(1).max(2048);
 const appName = z.string().min(1).max(200);
 const definitions: ToolDefinition[] = [
   {
-    name: ToolName.WEATHER_CURRENT,
-    description: 'Current weather at latitude/longitude',
-    executionLocation: ToolExecutionLocation.CLOUD,
-    systemConfirmation: false,
-    defaultPolicy: PermissionPolicy.ALWAYS_ALLOW,
-    argumentsSchema: z
-      .object({ latitude: z.number().min(-90).max(90), longitude: z.number().min(-180).max(180) })
-      .strict(),
-  },
-  {
     name: ToolName.APP_OPEN,
     description: 'Request the desktop to open an application',
     executionLocation: ToolExecutionLocation.LOCAL,
     systemConfirmation: false,
-    defaultPolicy: PermissionPolicy.ASK,
+    defaultPolicy: PermissionPolicy.ALWAYS_ALLOW,
     argumentsSchema: z.object({ appName }).strict(),
   },
   {
@@ -48,8 +38,18 @@ const definitions: ToolDefinition[] = [
     description: 'Request the desktop to open a file',
     executionLocation: ToolExecutionLocation.LOCAL,
     systemConfirmation: false,
-    defaultPolicy: PermissionPolicy.ASK,
-    argumentsSchema: z.object({ path }).strict(),
+    defaultPolicy: PermissionPolicy.ALWAYS_ALLOW,
+    argumentsSchema: z.union([
+      z
+        .object({
+          path,
+          directory: z
+            .enum(['desktop', 'downloads', 'documents', 'pictures', 'music', 'videos'])
+            .optional(),
+        })
+        .strict(),
+      z.object({ resourceId: z.string().min(1).max(200) }).strict(),
+    ]),
   },
   {
     name: ToolName.FILE_RENAME,

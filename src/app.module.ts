@@ -15,7 +15,6 @@ import { MessagesModule } from './messages/messages.module';
 import { SettingsModule } from './settings/settings.module';
 import { ToolsModule } from './tools/tools.module';
 import { UsersModule } from './users/users.module';
-import { WeatherModule } from './weather/weather.module';
 import { VoiceLogsModule } from './voice-logs/voice-logs.module';
 import { AttachmentsModule } from './attachments/attachments.module';
 import { ConfigService } from '@nestjs/config';
@@ -33,7 +32,6 @@ import { VoiceCommandsModule } from './voice-commands/voice-commands.module';
     ConversationsModule,
     MessagesModule,
     SettingsModule,
-    WeatherModule,
     IntegrationsModule,
     ToolsModule,
     LogsModule,
