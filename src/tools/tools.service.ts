@@ -7,9 +7,8 @@ import { IntegrationRegistry } from '../integrations/integration-registry.servic
 import { LogsService } from '../logs/logs.service';
 import { ToolLogErrorCode } from '../logs/tool-log.types';
 import { PermissionsService } from '../settings/permissions.service';
-import { WeatherService } from '../weather/weather.service';
 import { ToolCatalog } from './catalog/tool-catalog.service';
-import { ToolExecutionLocation, ToolName } from './catalog/tool-name';
+import { ToolExecutionLocation } from './catalog/tool-name';
 import { ExecuteToolDto } from './dto/execute-tool.dto';
 
 @Injectable()
@@ -19,17 +18,7 @@ export class ToolsService {
     private readonly permissions: PermissionsService,
     private readonly integrations: IntegrationRegistry,
     private readonly logs: LogsService,
-    weather: WeatherService,
-  ) {
-    integrations.register({
-      toolName: ToolName.WEATHER_CURRENT,
-      execute: (arguments_) =>
-        weather.current({
-          latitude: arguments_.latitude as number,
-          longitude: arguments_.longitude as number,
-        }),
-    });
-  }
+  ) {}
   list() {
     return this.catalog.list();
   }

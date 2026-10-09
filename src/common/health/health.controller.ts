@@ -40,7 +40,6 @@ export class HealthController {
       database: 'connected',
       ai,
       redis: 'not_configured',
-      weather: this.config.get('WEATHER_API_KEY') ? 'configured' : 'not_configured',
     };
   }
 
