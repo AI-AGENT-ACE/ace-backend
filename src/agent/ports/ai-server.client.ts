@@ -7,6 +7,7 @@ export interface AiToolCall {
   arguments: Record<string, unknown>;
 }
 export interface AiTurnResponse {
+  title?: string;
   content?: string;
   toolCalls: AiToolCall[];
 }
@@ -17,6 +18,9 @@ export interface AiToolResult {
   result?: unknown;
 }
 export interface AiTurnRequest {
+  signal?: AbortSignal;
+  userId: string;
+  conversationId: string;
   messages: { role: MessageRole; content: string }[];
   responseLanguage: string;
   tools: {

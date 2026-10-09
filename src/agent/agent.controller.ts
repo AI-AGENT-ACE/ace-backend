@@ -1,4 +1,5 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import { Body, Controller, Post, Res } from '@nestjs/common';
+import type { Response } from 'express';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { AuthenticatedUser } from '../auth/types/authenticated-user';
@@ -17,8 +18,21 @@ export class AgentController {
   ) {}
   @Post('turns')
   @Throttle({ default: { limit: 30, ttl: 60000 } })
-  turn(@CurrentUser() user: AuthenticatedUser, @Body() input: AgentTurnDto) {
-    return this.agent.turn(user.userId, input);
+  async turn(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() input: AgentTurnDto,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    const abort = new AbortController();
+    const close = () => {
+      if (!response.writableEnded) abort.abort();
+    };
+    response.on('close', close);
+    try {
+      return await this.agent.turn(user.userId, input, abort.signal);
+    } finally {
+      response.off('close', close);
+    }
   }
   @Post('tool-results') local(
     @CurrentUser() user: AuthenticatedUser,

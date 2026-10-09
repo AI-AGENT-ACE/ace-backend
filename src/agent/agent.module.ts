@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { AiConversationsService } from './adapters/ai-conversations.service';
 import { JwtModule } from '@nestjs/jwt';
 import { HttpModule } from '../common/http/http.module';
 import { ConversationsModule } from '../conversations/conversations.module';
@@ -27,6 +28,7 @@ import { ToolTicketService } from './services/tool-ticket.service';
   ],
   controllers: [AgentController],
   providers: [
+    AiConversationsService,
     AgentService,
     AgentContextService,
     AgentResponseService,

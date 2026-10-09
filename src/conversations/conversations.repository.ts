@@ -6,7 +6,9 @@ import { UpdateConversationDto } from './dto/conversation.dto';
 export class ConversationsRepository {
   constructor(private readonly prisma: PrismaService) {}
   create(userId: string, title?: string) {
-    return this.prisma.conversation.create({ data: { userId, title } });
+    return this.prisma.conversation.create({
+      data: { userId, title, titleSource: title === undefined ? 'DEFAULT' : 'CUSTOM' },
+    });
   }
   findOwned(userId: string, id: string) {
     return this.prisma.conversation.findFirst({ where: { userId, id } });
@@ -32,13 +34,19 @@ export class ConversationsRepository {
   update(userId: string, id: string, input: UpdateConversationDto) {
     return this.prisma.conversation.updateMany({
       where: { userId, id, deletedAt: null },
-      data: input,
+      data: { ...input, ...(input.title !== undefined ? { titleSource: 'CUSTOM' } : {}) },
     });
   }
   softDelete(userId: string, id: string) {
     return this.prisma.conversation.updateMany({
       where: { userId, id, deletedAt: null },
       data: { deletedAt: new Date() },
+    });
+  }
+  applyAiTitle(userId: string, id: string, title: string) {
+    return this.prisma.conversation.updateMany({
+      where: { id, userId, deletedAt: null, titleSource: 'TEMPORARY' },
+      data: { title, titleSource: 'AI' },
     });
   }
   restore(userId: string, id: string, cutoff: Date) {

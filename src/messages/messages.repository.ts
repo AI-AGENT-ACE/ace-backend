@@ -42,6 +42,24 @@ export class MessagesRepository {
       });
       if (parent.count !== 1)
         throw new AppException(404, ErrorCode.CONVERSATION_NOT_FOUND, 'Conversation not found');
+      const characters = Array.from(content.replace(/\s+/gu, ' ').trim());
+      const title =
+        characters.length > 200 ? `${characters.slice(0, 199).join('')}…` : characters.join('');
+      if (role === MessageRole.USER && title) {
+        // The parent row is already locked: concurrent sends cannot both name the chat.
+        // Check before insertion, and never replace a custom title or rename on later turns.
+        await transaction.conversation.updateMany({
+          where: {
+            id: conversationId,
+            userId,
+            deletedAt: null,
+            title: '새 대화',
+            titleSource: 'DEFAULT',
+            messages: { none: { role: MessageRole.USER } },
+          },
+          data: { title, titleSource: 'TEMPORARY' },
+        });
+      }
       const message = await transaction.message.create({ data: { conversationId, role, content } });
       if (attachmentIds.length) {
         const unique = [...new Set(attachmentIds)];
