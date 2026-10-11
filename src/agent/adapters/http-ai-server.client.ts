@@ -28,16 +28,16 @@ export class HttpAiServerClient extends AiServerClient {
     if (key) headers.Authorization = `Bearer ${key}`;
     const timeout = this.config.get<number>('AI_REQUEST_TIMEOUT_MS') ?? 120000;
     let data: unknown;
-    let conversationId: string;
+    let conversationId: string | undefined;
     const result = request.toolResults?.at(-1);
     try {
-      conversationId = await this.conversations.resolve(
+      conversationId = await this.conversations.lookup(
         request.userId,
         request.conversationId,
         base,
-        headers,
-        timeout,
       );
+      if (result && !conversationId)
+        throw new AppException(502, ErrorCode.AI_INVALID_RESPONSE, 'AI conversation is missing');
       const body = result
         ? {
             conversationId,
@@ -75,16 +75,35 @@ export class HttpAiServerClient extends AiServerClient {
         'AI server returned an invalid response',
       );
     const response = 'response' in parsed.data ? parsed.data.response : parsed.data;
-    if ('conversationId' in parsed.data && parsed.data.conversationId !== conversationId)
+    if (
+      'conversationId' in parsed.data &&
+      conversationId &&
+      parsed.data.conversationId !== conversationId
+    )
       throw new AppException(502, ErrorCode.AI_INVALID_RESPONSE, 'AI conversation mismatch');
-    const title = 'title' in parsed.data ? parsed.data.title : undefined;
+    if ('conversationId' in parsed.data) {
+      await this.conversations.remember(
+        request.userId,
+        request.conversationId,
+        base,
+        parsed.data.conversationId,
+      );
+      conversationId = parsed.data.conversationId;
+    }
+    const title =
+      ('title' in parsed.data ? parsed.data.title : undefined) ??
+      (!result && conversationId
+        ? await this.conversations.title(base, conversationId, headers, request.signal)
+        : undefined);
     if (response.type === 'message') return { title, content: response.content, toolCalls: [] };
-    if (response.type === 'tool_sequence') return { content: unsupportedSequence, toolCalls: [] };
+    if (response.type === 'tool_sequence')
+      return { title, content: unsupportedSequence, toolCalls: [] };
     if (
       response.tool === ToolName.WEATHER_CURRENT ||
       !Object.values(ToolName).includes(response.tool as ToolName)
     )
       return {
+        title,
         content: `현재 채팅에서 지원하지 않는 도구입니다: ${response.tool}.`,
         toolCalls: [],
       };
