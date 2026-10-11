@@ -1,5 +1,7 @@
 # 운영 배포와 모니터링
 
+> 2026-10-12부터 운영 배포 기준은 [Render + Neon](RENDER_NEON_DEPLOYMENT.md)입니다. AWS SSH 배포 및 GHCR 게시 워크플로는 제거했습니다. 아래 내용은 기존 Docker/SSH 구성의 참고 기록이며 현재 자동 배포 절차가 아닙니다.
+
 ## 배포 단위
 
 Backend와 AI는 별도 저장소와 이미지로 배포한다. Backend workflow는 `backend`만 갱신하고 `--no-deps`를 사용하므로 AI·PostgreSQL·Redis를 재시작하지 않는다. AI 저장소에서도 `AI_IMAGE`를 지정해 `docker compose --profile ai pull ai`와 `up -d --no-deps ai`만 실행한다. 친구가 관리하는 AI 저장소에는 `deploy/templates/ai-repository-deploy.yml`을 복사한 뒤 AI Dockerfile과 health endpoint에 맞게 조정한다.

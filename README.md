@@ -234,13 +234,14 @@ npm run trash:purge
 ## 운영 배포와 모니터링
 
 - Pull Request에서 format, lint, test, build와 Docker image build를 검사합니다.
-- `main` 병합 시 GHCR에 commit SHA와 `latest` image를 올립니다.
-- 운영 배포는 `prisma migrate deploy` 성공 후 Backend 서비스만 교체합니다.
+- 운영 백엔드는 Render Native Node 서비스로 배포합니다. GitHub의 `main`을 연결하고 Auto-Deploy를 `After CI Checks Pass`로 설정합니다.
+- GitHub Actions는 CI 검증을 담당하며 AWS SSH 배포와 GHCR 자동 게시는 사용하지 않습니다.
+- Render 시작 명령 `npm run start:render`는 `prisma migrate deploy` 성공 후 서버를 실행합니다.
 - `/health/live`는 프로세스 생존, `/health`와 `/health/ready`는 DB 준비 상태와 AI 의존성 저하를 표시합니다.
 - 요청 완료 로그는 request ID, route, status, duration과 error code만 JSON으로 기록합니다.
 - AI·PostgreSQL·Redis는 Backend 재배포로 재시작하지 않습니다.
 
-GitHub Secret, AWS 서버 준비, rollback과 로그 확인 절차는 [운영 배포와 모니터링](docs/DEPLOYMENT_AND_MONITORING.md)에 정리했습니다.
+Render 설정과 전환 절차는 [Render 배포 안내](docs/RENDER_NEON_DEPLOYMENT.md)에 정리했습니다.
 
 ## 현재 상태와 남은 작업
 
@@ -253,7 +254,7 @@ GitHub Secret, AWS 서버 준비, rollback과 로그 확인 절차는 [운영 �
 - Reverse Proxy를 직접 신뢰하지 않습니다. Nginx 등 신뢰 가능한 Proxy hop 수를 확인한 뒤에만 `TRUST_PROXY_HOPS`를 설정해야 합니다.
 - STT·TTS·Wake Word 감지는 이 백엔드에 구현하지 않았습니다.
 - 도구 티켓은 호출 상관관계와 인자를 검증하며 로컬 실행 완료를 서버가 증명하는 수단은 아닙니다.
-- 기본 Docker/GHCR/SSH 배포와 1단계 로그·health monitoring을 구성했습니다. Sentry와 Prometheus/Grafana 또는 OpenTelemetry는 실제 운영 필요성이 확인되면 추가합니다.
+- Render 배포와 1단계 로그·health monitoring을 사용합니다. 기존 Compose 파일은 수동 실행 참고용으로 유지합니다. Sentry와 Prometheus/Grafana 또는 OpenTelemetry는 실제 운영 필요성이 확인되면 추가합니다.
 
 ## 관련 문서
 
