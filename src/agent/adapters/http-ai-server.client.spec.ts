@@ -11,7 +11,12 @@ describe('HttpAiServerClient', () => {
     responseLanguage: 'ko',
     tools: [],
   };
-  const conversations = { resolve: jest.fn().mockResolvedValue('remote-conversation') };
+  const conversations = {
+    lookup: jest.fn().mockResolvedValue('remote-conversation'),
+    remember: jest.fn(),
+    title: jest.fn().mockResolvedValue('AI가 생성한 제목'),
+  };
+  beforeEach(() => jest.clearAllMocks());
   const config = (url?: string) =>
     ({
       get: (key: string) =>
@@ -27,6 +32,50 @@ describe('HttpAiServerClient', () => {
       ).generate(turn),
     ).rejects.toMatchObject({ response: { code: 'AI_NOT_CONFIGURED' } });
     expect(http.request).not.toHaveBeenCalled();
+  });
+  it('omits the first remote ID, persists the returned ID and retrieves its title', async () => {
+    conversations.lookup.mockResolvedValueOnce(undefined);
+    const http = {
+      request: jest.fn().mockResolvedValue({
+        conversationId: 'new-remote',
+        response: { type: 'message', content: '안녕하세요' },
+      }),
+    };
+    const response = await new HttpAiServerClient(
+      config('https://ai.example'),
+      http as never,
+      conversations as never,
+    ).generate(turn);
+    expect(JSON.parse(http.request.mock.calls[0][1].body)).toEqual({ message: '안녕' });
+    expect(conversations.remember).toHaveBeenCalledWith(
+      'user',
+      'owned-conversation',
+      'https://ai.example',
+      'new-remote',
+    );
+    expect(conversations.title).toHaveBeenCalledWith(
+      'https://ai.example',
+      'new-remote',
+      expect.any(Object),
+      undefined,
+    );
+    expect(response).toMatchObject({ title: 'AI가 생성한 제목', content: '안녕하세요' });
+  });
+  it('prefers an inline title if the AI server adds it to the envelope', async () => {
+    const http = {
+      request: jest.fn().mockResolvedValue({
+        conversationId: 'remote-conversation',
+        title: '응답 제목',
+        response: { type: 'message', content: '답변' },
+      }),
+    };
+    const response = await new HttpAiServerClient(
+      config('https://ai.example'),
+      http as never,
+      conversations as never,
+    ).generate(turn);
+    expect(response.title).toBe('응답 제목');
+    expect(conversations.title).not.toHaveBeenCalled();
   });
   it('rejects unexpected tool names', async () => {
     const http = {

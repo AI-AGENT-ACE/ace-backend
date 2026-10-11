@@ -14,6 +14,58 @@ export class AiConversationsService {
     private readonly http: JsonHttpClient,
   ) {}
 
+  async lookup(userId: string, conversationId: string, serverUrl: string) {
+    const owned = await this.prisma.conversation.findFirst({
+      where: { id: conversationId, userId, deletedAt: null },
+      select: { id: true },
+    });
+    if (!owned)
+      throw new AppException(404, ErrorCode.CONVERSATION_NOT_FOUND, 'Conversation not found');
+    const existing = await this.prisma.aiConversation.findUnique({
+      where: { conversationId_serverUrl: { conversationId, serverUrl } },
+    });
+    return existing?.remoteId;
+  }
+
+  async remember(userId: string, conversationId: string, serverUrl: string, remoteId: string) {
+    await this.lookup(userId, conversationId, serverUrl);
+    const saved = await this.prisma.aiConversation.upsert({
+      where: { conversationId_serverUrl: { conversationId, serverUrl } },
+      create: { conversationId, serverUrl, remoteId },
+      update: {},
+    });
+    // A concurrent first turn must never attach its response to another AI session.
+    if (saved.remoteId !== remoteId)
+      throw new AppException(409, ErrorCode.CONFLICT, 'AI conversation changed; retry the turn');
+  }
+
+  async title(
+    serverUrl: string,
+    remoteId: string,
+    headers: Record<string, string>,
+    signal?: AbortSignal,
+  ) {
+    try {
+      const data = await this.http.request(
+        `${serverUrl}/conversations`,
+        { method: 'GET', headers, signal },
+        5000,
+      );
+      if (!Array.isArray(data)) return undefined;
+      const matched = data.find(
+        (item: unknown) =>
+          typeof item === 'object' &&
+          item !== null &&
+          'conversationId' in item &&
+          item.conversationId === remoteId,
+      );
+      return z.object({ title: z.string().trim().min(1).max(200) }).safeParse(matched).data?.title;
+    } catch {
+      // Optional metadata must not discard a successful assistant response.
+      return undefined;
+    }
+  }
+
   async resolve(
     userId: string,
     conversationId: string,
