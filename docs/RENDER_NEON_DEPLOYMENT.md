@@ -1,5 +1,26 @@
 # Render Free Web Service + Neon 배포 준비
 
+## 현재 운영 배포 기준 (2026-10-12)
+
+운영 백엔드는 Render를 사용한다. `.github/workflows/deploy.yml`의 AWS SSH 배포와 GHCR 게시 작업은 제거하고 `Backend CI`는 유지한다. 이 변경이 main에 병합된 이후 커밋부터 기존 AWS 배포 작업이 실행되지 않는다. 과거 실패 기록은 그대로 남는다.
+
+Render 서비스의 Settings에서 다음을 확인한다. 저장소 파일 수정만으로 대시보드 설정은 변경되지 않는다.
+
+- 연결 저장소: `AI-AGENT-ACE/ace-backend`, Branch: `main`
+- Auto-Deploy: `After CI Checks Pass` 권장
+- Build Command: `npm ci --include=dev && npm run build`
+- Start Command: `npm run start:render`
+- Health Check Path: `/health/live`
+- 환경변수: 기존 Neon 연결 URL, JWT 비밀값, AI URL, CORS 설정 유지
+
+GitHub CI 통과 후 Render가 직접 빌드·배포한다. 별도의 Render Deploy Hook이나 AWS 비밀값은 필요하지 않다. `After CI Checks Pass`는 실패한 검사가 하나라도 있으면 배포하지 않으므로 기존 AWS 워크플로 제거를 먼저 main에 반영한다. [Render 자동 배포 문서](https://render.com/docs/deploys#configuring-auto-deploys)
+
+즉시 최신 코드를 배포하려면 Render에서 `Manual Deploy > Deploy latest commit`을 선택한다. Deploys에서 배포 커밋과 `Live` 상태를 확인한다. `/health/live` 200만으로 특정 커밋의 배포 여부를 판단하지 않는다.
+
+AWS 리소스가 실제로 존재한다면 워크플로 제거와 별도로 콘솔에서 사용 여부와 청구를 확인한다. 워크플로 제거는 기존 인스턴스나 스토리지를 삭제하지 않는다. GitHub의 기존 AWS 배포 Secret과 `DEPLOY_PATH`도 다른 작업에서 사용하지 않는지 확인한 뒤 정리할 수 있다.
+
+## 초기 배포 준비 기록
+
 기준: 2026-10-07. 이 문서는 배포 설정과 로컬 검증을 다룬다. 원격 DB 접속·migration 적용·커밋·push·Render 배포는 수행하지 않았다. 로컬 `.env`, 개발 DB와 기존 테스트 DB도 변경하지 않았다.
 
 ## 저장소 확인
