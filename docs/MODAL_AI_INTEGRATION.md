@@ -34,7 +34,9 @@
 - 기존 잘못된 upstream `/v1/turns`, `/v1/voice/commands`를 실제 Modal API로 교체했습니다.
 - AI의 대화 ID는 NestJS ID와 다릅니다. 새로운 `AiConversation` 테이블이 `(백엔드 대화 ID, AI 서버 주소)`별 원격 ID를 저장합니다. 대화 소유권을 검사한 뒤 조회하므로 클라이언트가 임의의 AI 대화 ID를 지정할 수 없습니다. 재시작 후에도 같은 AI 대화를 사용합니다.
 - migration `202610080001_ai_conversations`는 매핑 테이블을 추가합니다. 기존 테이블/메시지를 삭제하지 않습니다. 원격 Neon 및 기존 로컬 개발 DB에는 이번 작업에서 적용하지 않았습니다.
-- `app.open`/`app.close`의 `canonicalId`/`original` 응답을 기존 백엔드 `appName` 계약으로 변환합니다. 기존 도구 인자 검증, 권한 정책, 확인 요구, 서명 티켓을 유지합니다.
+- 앱 제어의 `canonicalId`/`original` 응답을 기존 백엔드 `appName` 계약으로 변환합니다. 기존 도구 인자 검증, 권한 정책, 확인 요구, 서명 티켓을 유지합니다.
+- `file.open`의 `query/directory/extensions`는 실행 경로가 아닌 로컬 검색 의도로 허용합니다. 데스크톱에서 실제 검색 결과를 선택한 뒤 Rust resourceId로 엽니다. `file.search` 위치가 없으면 데스크톱에서 허용 폴더를 선택합니다.
+- `screen.capture`에는 선택적인 `mode: full|region` 힌트만 허용하며 AI가 monitorId·좌표를 생성할 수 없습니다. 전체 캡처는 필요한 권한·대상 선택 이후 자동 완료하고 영역 캡처는 드래그를 유지합니다.
 - 데스크톱은 `configured`뿐 아니라 `connected` 상태도 AI 활성화로 처리합니다. `unavailable`은 짧은 health timeout일 수 있어 실제 요청을 시도하며, 실패하면 기존 오류 처리를 합니다. `not_configured`만 저장 전용으로 처리합니다.
 - 기존 `local-portfolio` 모드는 외부 AI를 호출하지 않는 데모였습니다. 이번 테스트용 로컬 설정과 운영 설정을 `cloud`로 바꿨습니다. 기존 로컬 백엔드 주소는 유지합니다.
 - AI 요청 timeout은 120초, 데스크톱 채팅 timeout은 150초입니다. 일반 API timeout은 변경하지 않았습니다. 음성은 기존 서버/Rust 제한을 유지합니다.

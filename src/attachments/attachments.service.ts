@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { basename } from 'path';
 import { AppException } from '../common/errors/app.exception';
@@ -76,24 +76,66 @@ export class AttachmentsService {
     const attachment = await this.repository.owned(userId, id);
     if (!attachment)
       throw new AppException(404, ErrorCode.ATTACHMENT_NOT_FOUND, 'Attachment not found');
-    try {
-      await this.storage.delete(attachment.storagePath);
-    } catch {
-      throw new AppException(500, ErrorCode.FILE_DELETE_FAILED, '파일을 삭제하지 못했습니다.');
-    }
-    await this.repository.remove(userId, id);
+    await this.prisma.$transaction(async (tx) => {
+      await tx.fileDeletionJob.upsert({
+        where: { storagePath: attachment.storagePath },
+        create: { storagePath: attachment.storagePath },
+        update: {},
+      });
+      await tx.attachment.deleteMany({ where: { id, userId } });
+    });
   }
 }
 
 @Injectable()
-export class AttachmentCleanupService {
+export class AttachmentCleanupService implements OnModuleInit, OnModuleDestroy {
+  private timer?: NodeJS.Timeout;
+  private running = false;
+  private readonly logger = new Logger(AttachmentCleanupService.name);
+  onModuleInit() {
+    this.timer = setInterval(() => {
+      void this.retryDeletions().catch(() => this.logger.error('FILE_DELETE_RETRY_FAILED'));
+    }, 60000);
+    this.timer.unref();
+  }
+  onModuleDestroy() {
+    if (this.timer) clearInterval(this.timer);
+  }
   constructor(
-    private readonly repository: AttachmentsRepository,
     @Inject(STORAGE_SERVICE) private readonly storage: StorageService,
+    private readonly prisma: PrismaService,
   ) {}
-  async removeForConversations(ids: string[]) {
-    if (!ids.length) return;
-    const attachments = await this.repository.pathsForConversations(ids);
-    for (const attachment of attachments) await this.storage.delete(attachment.storagePath);
+  async retryDeletions() {
+    if (this.running) return;
+    this.running = true;
+    try {
+      const jobs = await this.prisma.fileDeletionJob.findMany({
+        where: { nextAttemptAt: { lte: new Date() }, attempts: { lt: 10 } },
+        take: 100,
+        orderBy: { nextAttemptAt: 'asc' },
+      });
+      for (const job of jobs) {
+        try {
+          await this.storage.delete(job.storagePath);
+          await this.prisma.fileDeletionJob.deleteMany({ where: { id: job.id } });
+        } catch {
+          this.logger.warn({
+            event: 'FILE_DELETE_RETRY',
+            jobId: job.id,
+            attempt: job.attempts + 1,
+            exhausted: job.attempts + 1 >= 10,
+          });
+          await this.prisma.fileDeletionJob.updateMany({
+            where: { id: job.id, attempts: job.attempts },
+            data: {
+              attempts: { increment: 1 },
+              nextAttemptAt: new Date(Date.now() + Math.min(86400000, 60000 * 2 ** job.attempts)),
+            },
+          });
+        }
+      }
+    } finally {
+      this.running = false;
+    }
   }
 }

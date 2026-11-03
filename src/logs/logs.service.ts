@@ -21,6 +21,9 @@ export class LogsService {
     return this.logs.create({
       userId: entry.userId,
       toolName: definition.name,
+      ...(entry.executionId ? { executionId: entry.executionId } : {}),
+      ...(entry.requestId ? { requestId: entry.requestId } : {}),
+      ...(entry.attemptId ? { attemptId: entry.attemptId } : {}),
       status: entry.status,
       errorCode:
         entry.errorCode && Object.values(ToolLogErrorCode).includes(entry.errorCode)

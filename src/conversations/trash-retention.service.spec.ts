@@ -5,7 +5,7 @@ import { TrashRetentionService } from './trash-retention.service';
 
 describe('TrashRetentionService', () => {
   const conversations = { expiredIds: jest.fn(), purge: jest.fn() };
-  const attachments = { removeForConversations: jest.fn() };
+  const attachments = { removeForConversations: jest.fn(), retryDeletions: jest.fn() };
   const config = { get: jest.fn().mockReturnValue(30) };
   const service = new TrashRetentionService(
     conversations as unknown as ConversationsRepository,
@@ -20,18 +20,25 @@ describe('TrashRetentionService', () => {
 
   it('uses a bounded batch and continues after an individual cleanup failure', async () => {
     conversations.expiredIds.mockResolvedValue([{ id: 'failed' }, { id: 'deleted' }]);
-    attachments.removeForConversations
+    conversations.purge
       .mockRejectedValueOnce(new Error('disk error'))
-      .mockResolvedValueOnce(undefined);
-    conversations.purge.mockResolvedValue({ count: 1 });
-    await expect(service.purgeExpired(100)).resolves.toEqual({ scanned: 2, deleted: 1, failed: 1 });
-    expect(conversations.purge).toHaveBeenCalledTimes(1);
-    expect(conversations.expiredIds).toHaveBeenCalledWith(expect.any(Date), 100);
+      .mockResolvedValueOnce({ count: 1 });
+    await expect(service.purgeExpired(100)).resolves.toMatchObject({
+      scanned: 2,
+      deleted: 1,
+      failed: 1,
+    });
+    expect(conversations.purge).toHaveBeenCalledTimes(2);
+    expect(conversations.expiredIds).toHaveBeenCalledWith(expect.any(Date), 100, []);
   });
 
   it('keeps non-expired and restored rows outside the repository result', async () => {
     conversations.expiredIds.mockResolvedValue([]);
-    await expect(service.purgeExpired(250)).resolves.toEqual({ scanned: 0, deleted: 0, failed: 0 });
+    await expect(service.purgeExpired(250)).resolves.toMatchObject({
+      scanned: 0,
+      deleted: 0,
+      failed: 0,
+    });
     expect(attachments.removeForConversations).not.toHaveBeenCalled();
   });
 });

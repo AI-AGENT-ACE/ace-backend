@@ -1,4 +1,6 @@
 import { Module } from '@nestjs/common';
+import { ToolCatalogModule } from '../tools/catalog/tool-catalog.module';
+import { SettingsModule } from '../settings/settings.module';
 import { SpeechController } from './speech.controller';
 import { AiConversationsService } from '../agent/adapters/ai-conversations.service';
 import { HttpModule } from '../common/http/http.module';
@@ -8,7 +10,7 @@ import { VoiceCommandsService } from './voice-commands.service';
 import { VoiceTempService } from './voice-temp.service';
 
 @Module({
-  imports: [HttpModule],
+  imports: [HttpModule, ToolCatalogModule, SettingsModule],
   controllers: [VoiceCommandsController, SpeechController],
   providers: [VoiceCommandsService, VoiceTempService, VoiceAiClient, AiConversationsService],
 })

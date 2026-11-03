@@ -8,6 +8,7 @@ import { ToolName } from '../../tools/catalog/tool-name';
 import { AiServerClient, AiTurnRequest, AiTurnResponse } from '../ports/ai-server.client';
 import { AiConversationsService } from './ai-conversations.service';
 import { modalEnvelope, modalResponse, unsupportedSequence } from './modal-response';
+import { normalizeAiToolArguments } from './normalize-ai-tool';
 
 @Injectable()
 export class HttpAiServerClient extends AiServerClient {
@@ -46,11 +47,22 @@ export class HttpAiServerClient extends AiServerClient {
             ...(result.status === 'SUCCEEDED'
               ? { result: result.result ?? {} }
               : {
-                  error: { status: result.status },
+                  error: {
+                    status: result.status,
+                    ...((result.result as { failureReason?: string } | undefined)?.failureReason
+                      ? { code: (result.result as { failureReason: string }).failureReason }
+                      : {}),
+                  },
                   message:
-                    result.status === 'DENIED'
-                      ? '사용자가 실행을 거절했습니다.'
-                      : '도구 실행에 실패했습니다.',
+                    (result.result as { failureReason?: string } | undefined)?.failureReason ===
+                    'NATIVE_APPROVAL_EXPIRED'
+                      ? '승인 시간이 만료되어 실행하지 않았습니다.'
+                      : (result.result as { failureReason?: string } | undefined)?.failureReason ===
+                          'NATIVE_APPROVAL_STALE'
+                        ? '승인 상태를 확인할 수 없어 실행하지 않았습니다. 사용자의 거절이 아닙니다. 새 요청이 필요합니다.'
+                        : result.status === 'DENIED'
+                          ? '사용자가 실행을 거절했습니다.'
+                          : '도구 실행에 실패했습니다.',
                 }),
           }
         : {
@@ -108,11 +120,7 @@ export class HttpAiServerClient extends AiServerClient {
         toolCalls: [],
       };
     // Translate only app aliases. Existing argument validation and signed tickets still apply.
-    let arguments_ = response.arguments;
-    if (response.tool === ToolName.APP_OPEN || response.tool === ToolName.APP_CLOSE) {
-      const appName = arguments_.appName ?? arguments_.canonicalId ?? arguments_.original;
-      arguments_ = { appName };
-    }
+    const arguments_ = normalizeAiToolArguments(response.tool, response.arguments);
     return {
       title,
       toolCalls: [{ id: randomUUID(), tool: response.tool as ToolName, arguments: arguments_ }],

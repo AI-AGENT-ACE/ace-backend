@@ -2,6 +2,16 @@ node_modules
 dist
 coverage
 .env
+.env.*
+!.env.example
+.local
+artifacts
+*.dump
+*.backup
+*.pem
+*.key
+*.p12
+*.pfx
 .git
 uploads
 *.log

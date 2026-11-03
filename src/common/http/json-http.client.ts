@@ -1,12 +1,26 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
+export class UpstreamHttpError extends Error {
+  constructor(
+    readonly kind: 'http' | 'timeout' | 'network' | 'invalid_json',
+    readonly status?: number,
+  ) {
+    super('Upstream request failed');
+  }
+}
+
 @Injectable()
 export class JsonHttpClient {
   constructor(private readonly config: ConfigService) {}
 
   async request(url: string, init: RequestInit = {}, timeoutMs?: number): Promise<unknown> {
-    return JSON.parse((await this.read(url, init, timeoutMs, false)).toString('utf8')) as unknown;
+    const bytes = await this.read(url, init, timeoutMs, false);
+    try {
+      return JSON.parse(bytes.toString('utf8')) as unknown;
+    } catch {
+      throw new UpstreamHttpError('invalid_json');
+    }
   }
 
   async wav(url: string, init: RequestInit, timeoutMs: number): Promise<Buffer> {
@@ -34,7 +48,7 @@ export class JsonHttpClient {
     try {
       const signal = init.signal ? AbortSignal.any([init.signal, abort.signal]) : abort.signal;
       const response = await fetch(url, { ...init, signal, redirect: 'error' });
-      if (!response.ok || !response.body) throw new Error('Upstream request failed');
+      if (!response.ok || !response.body) throw new UpstreamHttpError('http', response.status);
       if (audio && !response.headers.get('content-type')?.toLowerCase().startsWith('audio/wav'))
         throw new Error('Invalid upstream audio type');
       const maximum = audio ? 8 * 1024 * 1024 : 512 * 1024;
@@ -55,6 +69,11 @@ export class JsonHttpClient {
         await reader.cancel().catch(() => {});
       }
       return Buffer.concat(chunks);
+    } catch (error) {
+      if (error instanceof UpstreamHttpError) throw error;
+      if (abort.signal.aborted) throw new UpstreamHttpError('timeout');
+      if (error instanceof TypeError) throw new UpstreamHttpError('network');
+      throw error;
     } finally {
       clearTimeout(timeout);
     }

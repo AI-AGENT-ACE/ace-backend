@@ -15,6 +15,7 @@ import { AgentContextService } from './services/agent-context.service';
 import { AgentResponseService } from './services/agent-response.service';
 import { AgentToolResultsService } from './services/agent-tool-results.service';
 import { ToolTicketService } from './services/tool-ticket.service';
+import { NativeTraceController } from './native-trace.controller';
 
 @Module({
   imports: [
@@ -26,7 +27,7 @@ import { ToolTicketService } from './services/tool-ticket.service';
     ToolsModule,
     LogsModule,
   ],
-  controllers: [AgentController],
+  controllers: [AgentController, NativeTraceController],
   providers: [
     AiConversationsService,
     AgentService,

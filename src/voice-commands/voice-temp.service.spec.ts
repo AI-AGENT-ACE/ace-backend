@@ -14,6 +14,11 @@ describe('VoiceTempService', () => {
     await service.onModuleInit();
     const path = await service.create(Buffer.from('RIFF----WAVE'));
     expect(path.startsWith(directory)).toBe(true);
+    await service.cleanupExpired(Date.now() + 7200000);
+    await expect(access(path)).resolves.toBeUndefined();
+    const restarted = new VoiceTempService(config as never);
+    await restarted.cleanupExpired(Date.now() + 7200000);
+    await expect(access(path)).rejects.toThrow();
     await service.remove(path);
     await expect(access(path)).rejects.toThrow();
     service.onModuleDestroy();

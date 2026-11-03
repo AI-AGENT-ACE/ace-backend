@@ -1,9 +1,14 @@
 import { IsEnum, IsIn, IsInt, Max, Min } from 'class-validator';
 import { VoiceCommandStatus } from '../../generated/prisma/client';
 import { OptionalField } from '../../common/validation/optional-field.decorator';
+import { ToolName } from '../../tools/catalog/tool-name';
 
 export class CreateVoiceLogDto {
-  @IsIn(['system.status', 'app.open', 'app.close', 'unsupported'])
+  @IsIn([
+    'system.status',
+    ...Object.values(ToolName).filter((tool) => tool !== ToolName.WEATHER_CURRENT),
+    'unsupported',
+  ])
   commandType!: string;
 
   @IsEnum(VoiceCommandStatus)

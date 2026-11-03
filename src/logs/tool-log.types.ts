@@ -17,4 +17,7 @@ export interface ToolLogEntry {
   status: ToolExecutionStatus;
   errorCode?: ToolLogErrorCode;
   duration?: number;
+  executionId?: string;
+  requestId?: string;
+  attemptId?: string;
 }

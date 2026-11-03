@@ -91,6 +91,8 @@ npm run db:local
 npm run start:dev
 ```
 
+Native 테스트 패널과 일반 채팅·음성 요청 모두 이 명령으로 사용합니다. 로컬 DB 분리를 검증하고 `127.0.0.1:3001`에서 watch 모드로 실행하며, 설정된 AI 연결을 유지합니다. 데스크톱은 별도 터미널에서 `npm run tauri dev`로 실행합니다. `start:native-test`는 AI를 끄는 별도 진단이 필요할 때만 사용합니다.
+
 시작 전에 Prisma Client 생성과 `prisma migrate deploy`를 실행합니다. DB 연결·마이그레이션이 성공해야 서버를 시작하며 데이터를 초기화하는 reset은 실행하지 않습니다.
 
 | 주소                              | 용도                              |
