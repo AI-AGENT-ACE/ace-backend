@@ -95,9 +95,9 @@ PUT /settings/permissions/file.delete
 
 Policy: `DENY`, `ASK`, `ALWAYS_ALLOW`. 변경 응답에 `denied`, `requiresConfirmation`, `systemConfirmation`을 포함합니다. `DENY`는 실행을 차단하고, 사용자 선호가 `ALWAYS_ALLOW`여도 파괴적 Tool의 System Confirmation은 true입니다.
 
-## Tool 목록과 Cloud 실행
+## Tool 목록과 LOCAL 실행
 
-`GET /tools`는 이름·설명·실행 위치·인자 JSON Schema·기본 Policy·System Confirmation을 반환합니다.
+`GET /tools`는 기본 Native 명령 24개의 이름·설명·LOCAL 실행 위치·입력/결과 JSON Schema·기본 Policy·System Confirmation을 반환합니다. 최신 전체 계약은 [native-tool-contract.json](native-tool-contract.json)이며 창·마이크·모니터·승인 처리는 외부 도구 수에 포함하지 않는 내부 IPC입니다. 아래 예전 6개 도구 표와 weather.current Cloud 예제는 과거 기록이며 현재 도구 목록으로 사용하지 않습니다.
 
 | Tool            | 위치  | 인자                | System Confirmation |
 | --------------- | ----- | ------------------- | ------------------- |

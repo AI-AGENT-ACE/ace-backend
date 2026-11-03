@@ -2,7 +2,6 @@ import { AppException } from '../common/errors/app.exception';
 import { ErrorCode } from '../common/errors/error-code';
 import { ConversationsRepository } from './conversations.repository';
 import { ConversationsService } from './conversations.service';
-import { AttachmentCleanupService } from '../attachments/attachments.service';
 import { ConfigService } from '@nestjs/config';
 
 describe('ConversationsService', () => {
@@ -35,7 +34,6 @@ describe('ConversationsService', () => {
     attachments.removeForConversations.mockReset().mockResolvedValue(undefined);
     service = new ConversationsService(
       repo as unknown as ConversationsRepository,
-      attachments as unknown as AttachmentCleanupService,
       { get: jest.fn().mockReturnValue(30) } as unknown as ConfigService,
     );
   });
@@ -85,7 +83,7 @@ describe('ConversationsService', () => {
     repo.findOwned!.mockResolvedValue({ ...record, deletedAt: new Date() });
     repo.permanentDelete!.mockResolvedValue({ count: 1 });
     await service.permanentDelete('user-a', 'conv-a');
-    expect(attachments.removeForConversations).toHaveBeenCalledWith(['conv-a']);
+    expect(attachments.removeForConversations).not.toHaveBeenCalled();
     expect(repo.permanentDelete).toHaveBeenCalledWith('user-a', 'conv-a');
   });
   it('requires an active conversation to be moved to trash before permanent deletion', async () => {

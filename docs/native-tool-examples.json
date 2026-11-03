@@ -1,0 +1,237 @@
+{
+  "description": "AI response 필드에 넣는 tool_call 예시. 요청 문장은 예시 메타데이터이며 API 전송 필드가 아님. 현재 로컬 계약 기준이며 운영 반영 여부는 별도 확인.",
+  "rules": [
+    "AI는 tool과 arguments만 결정하며 실행 완료를 미리 선언하지 않음. 실제 결과 수신 후 답변",
+    "resourceId, windowTargetId, monitorId, 승인 ID, 실행 티켓은 데스크톱/서버가 발급하며 AI가 생성하지 않음",
+    "extensions는 선택 사항. 점 없는 문자열 배열 사용: [txt]. null이나 .txt는 불가",
+    "위치가 없는 이름 검색은 directory를 생략하거나 drive_c 사용. home으로 임의 축소하지 않음",
+    "검색 범위와 파일 실행 허용 범위는 다름. 검색 결과가 있어도 실행이 제한될 수 있음",
+    "file.copy 목적지 생략은 동일 폴더 사본 생성. file.move 목적지는 필수",
+    "file.delete는 휴지통 이동. 영구 삭제나 강제 앱 종료 명령은 제공하지 않음",
+    "권한과 최종 승인 여부는 서버·Rust가 결정. confirmed 같은 임의 필드를 arguments에 추가하지 않음",
+    "폴더·파일 경로 예시는 알려진 위치 기준 상대 경로. 사용자 계정명이나 실제 존재 여부를 추측하지 않음"
+  ],
+  "examples": [
+    {
+      "request": "메모장 열어줘",
+      "response": { "type": "tool_call", "tool": "app.open", "arguments": { "appName": "메모장" } }
+    },
+    {
+      "request": "메모장 창 닫아줘",
+      "response": { "type": "tool_call", "tool": "app.close", "arguments": { "appName": "메모장" } }
+    },
+    {
+      "request": "메모장 앞으로 가져와줘",
+      "response": { "type": "tool_call", "tool": "app.focus", "arguments": { "appName": "메모장" } }
+    },
+    {
+      "request": "메모장 최소화해줘",
+      "response": {
+        "type": "tool_call",
+        "tool": "app.minimize",
+        "arguments": { "appName": "메모장" }
+      }
+    },
+    {
+      "request": "메모장 최대화해줘",
+      "response": {
+        "type": "tool_call",
+        "tool": "app.maximize",
+        "arguments": { "appName": "메모장" }
+      }
+    },
+    {
+      "request": "asdf.txt 찾아줘",
+      "response": {
+        "type": "tool_call",
+        "tool": "file.search",
+        "arguments": {
+          "query": "asdf.txt",
+          "directory": "drive_c",
+          "extensions": ["txt"],
+          "limit": 20
+        }
+      }
+    },
+    {
+      "request": "바탕화면 테스트 폴더의 원본.txt 열어줘",
+      "response": {
+        "type": "tool_call",
+        "tool": "file.open",
+        "arguments": { "directory": "desktop", "path": "테스트/원본.txt" }
+      }
+    },
+    {
+      "request": "바탕화면 테스트 폴더의 원본.txt 이름을 변경.txt로 바꿔줘",
+      "response": {
+        "type": "tool_call",
+        "tool": "file.rename",
+        "arguments": { "directory": "desktop", "path": "테스트/원본.txt", "newName": "변경.txt" }
+      }
+    },
+    {
+      "request": "바탕화면 테스트 폴더의 원본.txt를 문서 폴더로 옮겨줘",
+      "response": {
+        "type": "tool_call",
+        "tool": "file.move",
+        "arguments": {
+          "sourceDirectory": "desktop",
+          "sourcePath": "테스트/원본.txt",
+          "destinationDirectory": "documents",
+          "destinationPath": "원본.txt"
+        }
+      }
+    },
+    {
+      "request": "바탕화면 테스트 폴더의 원본.txt 복사해줘",
+      "response": {
+        "type": "tool_call",
+        "tool": "file.copy",
+        "arguments": { "sourceDirectory": "desktop", "sourcePath": "테스트/원본.txt" }
+      }
+    },
+    {
+      "request": "바탕화면 테스트 폴더의 원본.txt 삭제해줘",
+      "response": {
+        "type": "tool_call",
+        "tool": "file.delete",
+        "arguments": { "directory": "desktop", "path": "테스트/원본.txt" }
+      }
+    },
+    {
+      "request": "바탕화면 테스트 폴더 열어줘",
+      "response": {
+        "type": "tool_call",
+        "tool": "folder.open",
+        "arguments": { "directory": "desktop", "path": "테스트" }
+      }
+    },
+    {
+      "request": ".minecraft 폴더 찾아줘",
+      "response": {
+        "type": "tool_call",
+        "tool": "folder.search",
+        "arguments": { "query": ".minecraft", "directory": "drive_c", "limit": 20 }
+      }
+    },
+    {
+      "request": "바탕화면에 새 테스트 폴더 만들어줘",
+      "response": {
+        "type": "tool_call",
+        "tool": "folder.create",
+        "arguments": { "parent": "desktop", "name": "새 테스트" }
+      }
+    },
+    {
+      "request": "네이버 열어줘",
+      "response": {
+        "type": "tool_call",
+        "tool": "web.open",
+        "arguments": { "url": "https://www.naver.com/" }
+      }
+    },
+    {
+      "request": "구글에서 서울 여행 정보 검색해줘",
+      "response": {
+        "type": "tool_call",
+        "tool": "web.search",
+        "arguments": { "engine": "google", "query": "서울 여행 정보" }
+      }
+    },
+    {
+      "request": "클립보드에 ACE 테스트 저장해줘",
+      "response": {
+        "type": "tool_call",
+        "tool": "clipboard.write",
+        "arguments": { "text": "ACE 테스트" }
+      }
+    },
+    {
+      "request": "지금 클립보드 텍스트 읽어줘",
+      "response": { "type": "tool_call", "tool": "clipboard.read", "arguments": {} }
+    },
+    {
+      "request": "음성 입력 시작해줘",
+      "response": { "type": "tool_call", "tool": "voice.activate", "arguments": {} }
+    },
+    {
+      "request": "전체 화면 캡처해줘",
+      "response": { "type": "tool_call", "tool": "screen.capture", "arguments": { "mode": "full" } }
+    },
+    {
+      "request": "소리 크기 30으로 설정해줘",
+      "response": { "type": "tool_call", "tool": "system.volume.set", "arguments": { "level": 30 } }
+    },
+    {
+      "request": "볼륨 꺼줘",
+      "response": {
+        "type": "tool_call",
+        "tool": "system.volume.mute",
+        "arguments": { "mute": true }
+      }
+    },
+    {
+      "request": "Windows 디스플레이 설정 열어줘",
+      "response": {
+        "type": "tool_call",
+        "tool": "system.open_settings",
+        "arguments": { "page": "display" }
+      }
+    },
+    {
+      "request": "컴퓨터 잠가줘",
+      "response": { "type": "tool_call", "tool": "system.lock", "arguments": {} }
+    }
+  ],
+  "variants": [
+    {
+      "request": "음소거 해제해줘",
+      "response": {
+        "type": "tool_call",
+        "tool": "system.volume.mute",
+        "arguments": { "mute": false }
+      }
+    },
+    {
+      "request": "영역 선택해서 캡처해줘",
+      "response": {
+        "type": "tool_call",
+        "tool": "screen.capture",
+        "arguments": { "mode": "region" }
+      }
+    },
+    {
+      "request": "Windows 기본 설정 열어줘",
+      "response": { "type": "tool_call", "tool": "system.open_settings", "arguments": {} }
+    },
+    {
+      "request": "바탕화면 테스트 폴더의 원본.txt를 같은 폴더의 대상.txt로 복사해줘",
+      "response": {
+        "type": "tool_call",
+        "tool": "file.copy",
+        "arguments": {
+          "sourceDirectory": "desktop",
+          "sourcePath": "테스트/원본.txt",
+          "destinationDirectory": "desktop",
+          "destinationPath": "테스트/대상.txt"
+        }
+      }
+    },
+    {
+      "request": "원본 위치를 자연어로 전달하는 복사",
+      "response": {
+        "type": "tool_call",
+        "tool": "file.copy",
+        "arguments": { "query": "바탕화면 테스트 폴더의 원본.txt", "extensions": ["txt"] }
+      }
+    },
+    {
+      "request": "원본 위치를 자연어로 전달하는 삭제",
+      "response": {
+        "type": "tool_call",
+        "tool": "file.delete",
+        "arguments": { "query": "바탕화면 테스트 폴더의 원본.txt", "extensions": ["txt"] }
+      }
+    }
+  ]
+}

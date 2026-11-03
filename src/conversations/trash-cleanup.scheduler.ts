@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnApplicationBootstrap, OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Cron } from '@nestjs/schedule';
 import { TrashRetentionService } from './trash-retention.service';
@@ -14,9 +14,22 @@ export type CleanupRun = {
 };
 
 @Injectable()
-export class TrashCleanupScheduler {
+export class TrashCleanupScheduler implements OnApplicationBootstrap, OnModuleDestroy {
   private readonly logger = new Logger(TrashCleanupScheduler.name);
   private running = false;
+  private startup?: NodeJS.Timeout;
+  private stopped = false;
+  onApplicationBootstrap() {
+    if (this.config.get<string>('NODE_ENV') === 'test') return;
+    this.startup = setTimeout(() => {
+      void this.scheduledCleanup();
+    }, 0);
+    this.startup.unref();
+  }
+  onModuleDestroy() {
+    this.stopped = true;
+    if (this.startup) clearTimeout(this.startup);
+  }
 
   constructor(
     private readonly retention: TrashRetentionService,
@@ -43,11 +56,16 @@ export class TrashCleanupScheduler {
     let deletedCount = 0;
     let failedCount = 0;
     try {
-      const result = await this.retention.purgeExpired(
-        this.config.get<number>('TRASH_CLEANUP_BATCH_SIZE', 250),
-      );
-      deletedCount = result.deleted;
-      failedCount = result.failed;
+      const size = Math.min(100, this.config.get<number>('TRASH_CLEANUP_BATCH_SIZE', 100));
+      const excluded: string[] = [];
+      for (let batch = 0; batch < 100 && !this.stopped; batch++) {
+        const result = await this.retention.purgeExpired(size, excluded);
+        excluded.push(...(result.attemptedIds || []));
+        deletedCount += result.deleted;
+        failedCount += result.failed;
+        if (result.scanned !== size || !result.attemptedIds?.length) break;
+        await new Promise((resolve) => setTimeout(resolve, 10));
+      }
       const run = {
         skipped: false,
         startedAt,

@@ -3,12 +3,11 @@ import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import dotenv from 'dotenv';
+import { localDatabases } from './local-database-policy.mjs';
 const require = createRequire(import.meta.url);
 require('reflect-metadata');
 dotenv.config({ path: join(import.meta.dirname, '../.env'), quiet: true });
-const testUrl = new URL(process.env.TEST_DATABASE_URL || '');
-if (!testUrl.pathname.endsWith('_test') || !['localhost', '127.0.0.1'].includes(testUrl.hostname))
-  throw new Error('Browser tests require a separate local *_test database.');
+const { test: testUrl } = localDatabases(process.env);
 process.env.DATABASE_URL = testUrl.toString();
 process.env.NODE_ENV = 'test';
 process.env.SWAGGER_ENABLED = 'false';

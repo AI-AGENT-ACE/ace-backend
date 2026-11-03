@@ -4,7 +4,6 @@ import { ErrorCode } from '../common/errors/error-code';
 import { cursorPage } from '../common/pagination/page.dto';
 import { ConversationsRepository } from './conversations.repository';
 import { ConversationQueryDto, UpdateConversationDto } from './dto/conversation.dto';
-import { AttachmentCleanupService } from '../attachments/attachments.service';
 import { ConfigService } from '@nestjs/config';
 
 export const DEFAULT_TRASH_RETENTION_DAYS = 30;
@@ -13,7 +12,6 @@ export const DEFAULT_TRASH_RETENTION_DAYS = 30;
 export class ConversationsService {
   constructor(
     private readonly conversations: ConversationsRepository,
-    private readonly attachments: AttachmentCleanupService,
     private readonly config: ConfigService,
   ) {}
   private retentionMs() {
@@ -106,7 +104,6 @@ export class ConversationsService {
 
   async permanentDelete(userId: string, id: string) {
     await this.ownedTrash(userId, id);
-    await this.attachments.removeForConversations([id]);
     const changed = await this.conversations.permanentDelete(userId, id);
     if (!changed.count)
       throw new AppException(

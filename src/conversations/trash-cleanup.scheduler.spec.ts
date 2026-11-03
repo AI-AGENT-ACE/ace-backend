@@ -23,7 +23,7 @@ describe('TrashCleanupScheduler', () => {
       finishedAt: expect.any(String),
       duration: expect.any(Number),
     });
-    expect(retention.purgeExpired).toHaveBeenCalledWith(250);
+    expect(retention.purgeExpired).toHaveBeenCalledWith(100, []);
   });
 
   it('skips an overlapping run in the same instance', async () => {

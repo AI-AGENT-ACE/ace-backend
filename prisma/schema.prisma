@@ -103,6 +103,37 @@ model Message {
   @@index([conversationId, createdAt, id])
 }
 
+model NativeExecution {
+  id String @id
+  userId String
+  requestId String
+  toolName String
+  state String @default("REQUESTED")
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+  events NativeExecutionEvent[]
+  @@index([userId, requestId])
+}
+model NativeExecutionEvent {
+  id String @id @default(cuid())
+  executionId String
+  attemptId String
+  previousAttemptId String?
+  state String
+  createdAt DateTime @default(now())
+  execution NativeExecution @relation(fields: [executionId], references: [id], onDelete: Cascade)
+  @@unique([executionId, attemptId, state])
+}
+
+model FileDeletionJob {
+  id String @id @default(cuid())
+  storagePath String @unique
+  attempts Int @default(0)
+  nextAttemptAt DateTime @default(now())
+  createdAt DateTime @default(now())
+  @@index([nextAttemptAt])
+}
+
 model Attachment {
   id             String   @id @default(cuid())
   userId         String
@@ -154,6 +185,9 @@ model ToolExecutionLog {
   status    ToolExecutionStatus
   errorCode String?
   duration  Int?
+  executionId String? @unique
+  requestId String?
+  attemptId String?
   createdAt DateTime            @default(now())
   user      User?               @relation(fields: [userId], references: [id], onDelete: SetNull)
 

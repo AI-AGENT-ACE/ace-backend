@@ -56,19 +56,42 @@ export class ConversationsRepository {
     });
   }
   permanentDelete(userId: string, id: string) {
-    return this.prisma.conversation.deleteMany({ where: { userId, id, deletedAt: { not: null } } });
+    return this.prisma.$transaction(async (tx) => {
+      const rows = await tx.$queryRaw<Array<{ id: string }>>`
+        SELECT "id" FROM "Conversation" WHERE "id" = ${id} AND "userId" = ${userId}
+        AND "deletedAt" IS NOT NULL FOR UPDATE`;
+      if (!rows.length) return { count: 0 };
+      const files = await tx.attachment.findMany({
+        where: { conversationId: id },
+        select: { storagePath: true },
+      });
+      await tx.fileDeletionJob.createMany({ data: files, skipDuplicates: true });
+      return tx.conversation.deleteMany({ where: { userId, id, deletedAt: { not: null } } });
+    });
   }
-  expiredIds(cutoff: Date, limit: number) {
+  expiredIds(cutoff: Date, limit: number, excluded: string[] = []) {
     return this.prisma.conversation.findMany({
-      where: { deletedAt: { lte: cutoff } },
+      where: { deletedAt: { lte: cutoff }, id: { notIn: excluded } },
       orderBy: [{ deletedAt: 'asc' }, { id: 'asc' }],
       take: limit,
       select: { id: true },
     });
   }
   purge(ids: string[], cutoff: Date) {
-    return this.prisma.conversation.deleteMany({
-      where: { id: { in: ids }, deletedAt: { lte: cutoff } },
+    return this.prisma.$transaction(async (tx) => {
+      // Lock candidates before reading attachments; restore/delete must serialize.
+      const eligible = await tx.$queryRaw<Array<{ id: string }>>`
+        SELECT "id" FROM "Conversation" WHERE "id" = ANY(${ids}::text[])
+        AND "deletedAt" <= ${cutoff} FOR UPDATE`;
+      const eligibleIds = eligible.map((row) => row.id);
+      const files = await tx.attachment.findMany({
+        where: { conversationId: { in: eligibleIds } },
+        select: { storagePath: true },
+      });
+      await tx.fileDeletionJob.createMany({ data: files, skipDuplicates: true });
+      return tx.conversation.deleteMany({
+        where: { id: { in: eligibleIds }, deletedAt: { lte: cutoff } },
+      });
     });
   }
 }

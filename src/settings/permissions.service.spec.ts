@@ -8,6 +8,25 @@ describe('PermissionsService', () => {
   const repo = { permission: jest.fn(), setPermission: jest.fn(), permissions: jest.fn() };
   const service = new PermissionsService(repo as unknown as SettingsRepository, new ToolCatalog());
   beforeEach(() => jest.clearAllMocks());
+  it('클립보드 읽기는 기본 허용, 쓰기는 일회성 확인이며 DENY 유지', async () => {
+    repo.permission.mockResolvedValue(null);
+    expect(await service.effective('user-a', ToolName.CLIPBOARD_READ)).toMatchObject({
+      policy: 'ALWAYS_ALLOW',
+      requiresConfirmation: false,
+    });
+    expect(await service.effective('user-a', ToolName.CLIPBOARD_WRITE)).toMatchObject({
+      policy: 'ASK',
+      requiresConfirmation: true,
+    });
+    repo.permission.mockResolvedValue({ policy: PermissionPolicy.ALWAYS_ALLOW });
+    expect(await service.effective('user-a', ToolName.CLIPBOARD_WRITE)).toMatchObject({
+      requiresConfirmation: true,
+    });
+    repo.permission.mockResolvedValue({ policy: PermissionPolicy.DENY });
+    expect(await service.effective('user-a', ToolName.CLIPBOARD_READ)).toMatchObject({
+      denied: true,
+    });
+  });
   it('allows basic open operations by default but retains explicit account preferences', async () => {
     repo.permission.mockResolvedValue(null);
     for (const tool of [ToolName.APP_OPEN, ToolName.FILE_OPEN])

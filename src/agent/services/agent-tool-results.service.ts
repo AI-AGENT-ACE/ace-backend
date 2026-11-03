@@ -15,6 +15,7 @@ import { AiServerClient, AiToolResult } from '../ports/ai-server.client';
 import { AgentContextService } from './agent-context.service';
 import { AgentResponseService } from './agent-response.service';
 import { ToolTicketService } from './tool-ticket.service';
+import { localSearchMessage } from './local-search-result';
 
 @Injectable()
 export class AgentToolResultsService {
@@ -34,7 +35,20 @@ export class AgentToolResultsService {
 
   async local(userId: string, input: LocalToolResultDto) {
     const claims = await this.tickets.verify(userId, input.ticket);
+    if (input.executionId && input.executionId !== claims.callId)
+      throw new AppException(
+        400,
+        ErrorCode.INVALID_TOOL_TICKET,
+        'Execution ID differs from the issued ticket',
+      );
     await this.conversations.active(userId, claims.conversationId);
+    if (input.attemptId)
+      await this.tickets.validateResultAttempt(
+        userId,
+        claims.callId,
+        input.attemptId,
+        input.status,
+      );
     if (this.catalog.get(claims.toolName).executionLocation !== ToolExecutionLocation.LOCAL) {
       throw new AppException(
         400,
@@ -47,7 +61,7 @@ export class AgentToolResultsService {
       throw new AppException(403, ErrorCode.TOOL_PERMISSION_DENIED, 'Tool permission is denied');
     }
     if (
-      input.status !== ToolExecutionStatus.DENIED &&
+      input.status === ToolExecutionStatus.SUCCEEDED &&
       policy.requiresConfirmation &&
       !input.confirmed
     ) {
@@ -57,18 +71,46 @@ export class AgentToolResultsService {
         'Explicit confirmation is required',
       );
     }
-    await this.logs.record({
-      userId,
-      toolName: claims.toolName,
-      status: input.status,
-      errorCode: input.errorCode,
-      duration: input.duration,
-    });
+    let result = input.result;
+    if (claims.toolName === 'clipboard.read' && input.status === ToolExecutionStatus.SUCCEEDED) {
+      const text = input.result?.text;
+      if (
+        typeof text !== 'string' ||
+        Buffer.byteLength(text, 'utf8') > 65536 ||
+        text.includes('\0')
+      )
+        throw new AppException(
+          400,
+          ErrorCode.VALIDATION_ERROR,
+          'Clipboard text result is missing or invalid',
+        );
+      result = { text };
+    }
+    try {
+      await this.logs.record({
+        userId,
+        toolName: claims.toolName,
+        status: input.status,
+        errorCode: input.errorCode,
+        duration: input.duration,
+        executionId: claims.callId,
+        requestId: claims.requestId,
+        attemptId: input.attemptId,
+      });
+    } catch (error) {
+      if (typeof error === 'object' && error !== null && 'code' in error && error.code === 'P2002')
+        throw new AppException(
+          409,
+          ErrorCode.CONFLICT,
+          'Execution result has already been consumed',
+        );
+      throw error;
+    }
     return this.resume(userId, claims.conversationId, {
       callId: claims.callId,
       tool: claims.toolName,
       status: input.status,
-      result: input.result,
+      result,
     });
   }
 
@@ -112,6 +154,25 @@ export class AgentToolResultsService {
         MessageRole.TOOL,
         `${result.tool}: ${result.status}`,
       );
+      const localMessage =
+        result.status === ToolExecutionStatus.FAILED &&
+        (result.result as { failureReason?: string } | undefined)?.failureReason ===
+          'NATIVE_APPROVAL_EXPIRED'
+          ? '승인 시간이 만료되어 실행하지 않았습니다.'
+          : localSearchMessage(result.tool, result.status, result.result);
+      if (localMessage) {
+        // Keep the AI conversation informed with metadata only. Its prose or
+        // connectivity must not replace a completed local search with a failure.
+        try {
+          await this.ai.generate(await this.context.build(userId, conversationId, [result]));
+        } catch {
+          // The verified Native result remains authoritative for this operation.
+        }
+        return this.responses.deliver(userId, conversationId, {
+          content: localMessage,
+          toolCalls: [],
+        });
+      }
       const response = await this.ai.generate(
         await this.context.build(userId, conversationId, [result]),
       );

@@ -47,6 +47,11 @@ export class ToolTicketDto {
 }
 
 export class LocalToolResultDto extends ToolTicketDto {
+  @OptionalField() @IsString() @Matches(/^[0-9a-f-]{36}$/) attemptId?: string;
+  @OptionalField()
+  @IsString()
+  @Matches(/^[0-9a-f-]{36}$/)
+  executionId?: string;
   @IsEnum(ToolExecutionStatus)
   status!: ToolExecutionStatus;
   @OptionalField()

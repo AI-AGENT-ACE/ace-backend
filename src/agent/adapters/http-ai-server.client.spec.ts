@@ -17,6 +17,28 @@ describe('HttpAiServerClient', () => {
     title: jest.fn().mockResolvedValue('AI가 생성한 제목'),
   };
   beforeEach(() => jest.clearAllMocks());
+  it('distinguishes expired approval from user denial in the AI result', async () => {
+    const http = { request: jest.fn().mockResolvedValue({ type: 'message', content: '만료' }) };
+    await new HttpAiServerClient(
+      config('https://ai.example'),
+      http as never,
+      conversations as never,
+    ).generate({
+      ...turn,
+      toolResults: [
+        {
+          callId: 'call',
+          tool: 'clipboard.write' as never,
+          status: 'FAILED',
+          result: { failureReason: 'NATIVE_APPROVAL_EXPIRED' },
+        },
+      ],
+    });
+    const body = JSON.parse(http.request.mock.calls[0][1].body);
+    expect(body.error).toEqual({ status: 'FAILED', code: 'NATIVE_APPROVAL_EXPIRED' });
+    expect(body.message).toContain('승인 시간이 만료');
+    expect(body.message).not.toContain('사용자가 실행을 거절했습니다');
+  });
   const config = (url?: string) =>
     ({
       get: (key: string) =>

@@ -8,6 +8,7 @@ import { join, resolve } from 'path';
 export class VoiceTempService implements OnModuleInit, OnModuleDestroy {
   private readonly directory: string;
   private timer?: NodeJS.Timeout;
+  private readonly active = new Set<string>();
   constructor(private readonly config: ConfigService) {
     this.directory = resolve(config.getOrThrow<string>('VOICE_TEMP_DIR'));
   }
@@ -15,7 +16,7 @@ export class VoiceTempService implements OnModuleInit, OnModuleDestroy {
     await mkdir(this.directory, { recursive: true });
     await this.cleanupExpired();
     this.timer = setInterval(
-      () => void this.cleanupExpired(),
+      () => void this.cleanupExpired().catch(() => undefined),
       this.config.getOrThrow<number>('VOICE_CLEANUP_INTERVAL_SECONDS') * 1000,
     );
     this.timer.unref();
@@ -27,11 +28,13 @@ export class VoiceTempService implements OnModuleInit, OnModuleDestroy {
     await mkdir(this.directory, { recursive: true });
     const path = join(this.directory, `${randomUUID()}.wav`);
     await writeFile(path, buffer, { flag: 'wx', mode: 0o600 });
+    this.active.add(path);
     return path;
   }
   async remove(path: string) {
     if (!resolve(path).startsWith(`${this.directory}${process.platform === 'win32' ? '\\' : '/'}`))
       return;
+    this.active.delete(path);
     await rm(path, { force: true }).catch(() => undefined);
   }
   async cleanupExpired(now = Date.now()) {
@@ -40,6 +43,7 @@ export class VoiceTempService implements OnModuleInit, OnModuleDestroy {
     for (const entry of entries) {
       if (!entry.isFile() || !/^[0-9a-f-]{36}\.wav$/i.test(entry.name)) continue;
       const path = join(this.directory, entry.name);
+      if (this.active.has(path)) continue;
       const info = await stat(path).catch(() => null);
       if (info && now - info.mtimeMs > ttl) await this.remove(path);
     }
